@@ -1,0 +1,31 @@
+{
+  "required": true,
+  "package": "myau.mixin",
+  "plugin": "myau.init.FMLLoadingPlugin",
+  "refmap": "mixins.spiritvisuals.refmap.json",
+  "minVersion": "0.7",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "MixinGuiIngameHUD"
+  ],
+  "client": [
+    "MixinBlock",
+    "MixinBlockBush",
+    "MixinBlockGrass",
+    "MixinBlockLadder",
+    "MixinBlockLeaves",
+    "MixinBlockModelRenderer",
+    "MixinBlockPane",
+    "MixinBlockRendererDispatcher",
+    "MixinBlockWeb",
+    "MixinEntityRenderer",
+    "MixinGuiIngameForge",
+    "MixinItemStack",
+    "MixinMinecraft",
+    "MixinNetworkManager",
+    "MixinRendererLivingEntity",
+    "MixinVisGraph",
+    "MixinWorldRenderer"
+  ],
+  "server": []
+}

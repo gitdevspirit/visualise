@@ -1,0 +1,9 @@
+[
+  {
+    "modid": "spiritvisuals",
+    "name": "Spirit Visuals",
+    "version": "${version}",
+    "mcversion": "1.8.9",
+    "description": "Visual-only module set extracted from Spirit."
+  }
+]
