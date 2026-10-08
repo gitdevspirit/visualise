@@ -83,14 +83,12 @@ import java.util.Map;
   this.categories = categories;
   this.categoryModules = categoryModules;
 
-  ```
    frameX = new int[categories.size()];
    frameY = new int[categories.size()];
    for (int i = 0; i < categories.size(); i++) {
        frameX[i] = 25 + i * (FRAME_W + GAP);
        frameY[i] = 35;
    }
-  ```
 
   }
 
@@ -120,7 +118,6 @@ import java.util.Map;
   float dt = Math.min((now - lastMs) / 1000f, 0.1f);
   lastMs = now;
 
-  ```
    ScaledResolution sr = new ScaledResolution(mc);
    int sw = sr.getScaledWidth();
    int sh = sr.getScaledHeight();
@@ -137,7 +134,6 @@ import java.util.Map;
    if (openDropdown != null) {
        drawDropdown(mouseX, mouseY);
    }
-  ```
 
   }
 
@@ -146,7 +142,6 @@ import java.util.Map;
   GuiRender.textNoShadow("Spirit", 12, 10, TEXT);
   GuiRender.textNoShadow("Raven", 12 + GuiRender.textW("Spirit") + 5, 10, ACCENT);
 
-  ```
    String hint = "LMB toggle  •  RMB settings  •  ESC close";
    GuiRender.textNoShadow(hint, sw - GuiRender.textW(hint) - 12, 10, MUTED);
   ```
@@ -168,7 +163,6 @@ import java.util.Map;
   int x = frameX[index];
   int y = frameY[index];
 
-  ```
    List<Module> modules = visibleModules(categoryModules.get(index));
    int height = HEADER_H + 2 + modulesHeight(modules);
 
@@ -191,7 +185,6 @@ import java.util.Map;
    for (Module module : modules) {
        cy = drawModule(module, x + PAD, cy, FRAME_W - PAD * 2, mouseX, mouseY, dt);
    }
-  ```
 
   }
 
@@ -199,7 +192,6 @@ import java.util.Map;
   boolean hover = inside(mx, my, x, y, w, ROW_H);
   boolean enabled = module.isEnabled();
 
-  ```
    float a = toggleAnim.getOrDefault(module, enabled ? 1f : 0f);
    a = lerp(a, enabled ? 1f : 0f, dt * 16f);
    toggleAnim.put(module, a);
@@ -236,14 +228,12 @@ import java.util.Map;
    }
 
    return next;
-  ```
 
   }
 
   private void drawSetting(Setting setting, float x, float y, float w, int mx, int my) {
   boolean hover = inside(mx, my, x, y, w, ROW_H);
 
-  ```
    if (setting instanceof BooleanSetting) {
        BooleanSetting s = (BooleanSetting) setting;
        GuiRender.textNoShadow(s.getName(), x + 2, y + 5, hover ? TEXT : MUTED);
@@ -304,14 +294,12 @@ import java.util.Map;
    }
 
    GuiRender.rect(x + 2, y + ROW_H - 1, w - 4, 1, 0xFF222222);
-  ```
 
   }
 
   private void drawDropdown(int mx, int my) {
   if (openDropdown == null) return;
 
-  ```
    String[] options = openDropdown.getOptions();
    int width = 105;
    int x = 0;
@@ -348,7 +336,6 @@ import java.util.Map;
        GuiRender.textNoShadow(options[i], x + 7, oy + 5,
                i == openDropdown.getIndex() ? ACCENT : TEXT);
    }
-  ```
 
   }
 
@@ -388,7 +375,6 @@ import java.util.Map;
   return;
   }
 
-  ```
    // Search field.
    ScaledResolution sr = new ScaledResolution(mc);
    int sw = sr.getScaledWidth();
@@ -442,7 +428,6 @@ import java.util.Map;
            }
        }
    }
-  ```
 
   }
 
@@ -469,7 +454,6 @@ import java.util.Map;
   private void handleDropdownClick(int mx, int my) {
   String[] options = openDropdown.getOptions();
 
-  ```
    // Recompute popup position exactly as in drawDropdown.
    int width = 105, x = 0, y = 0;
    outer:
@@ -498,7 +482,6 @@ import java.util.Map;
        }
    }
    openDropdown = null;
-  ```
 
   }
 
@@ -547,7 +530,6 @@ import java.util.Map;
   return;
   }
 
-  ```
    if (keyCode == Keyboard.KEY_ESCAPE) {
        if (searchOpen && !search.isEmpty()) {
            search = "";
@@ -568,7 +550,6 @@ import java.util.Map;
            search += typedChar;
        }
    }
-  ```
 
   }
 
