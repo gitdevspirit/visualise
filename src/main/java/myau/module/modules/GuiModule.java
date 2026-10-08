@@ -2,7 +2,7 @@ package myau.module.modules;
 
 import myau.module.Module;
 import myau.ui.clickgui.ModuleRegistry;
-import myau.ui.clickgui.VapeClickGui;
+import myau.ui.clickgui.RavenClickGui;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.input.Keyboard;
 
@@ -22,7 +22,7 @@ public class GuiModule extends Module {
         setEnabled(false);
         ModuleRegistry.init();
 
-        VapeClickGui gui = new VapeClickGui(
+        RavenClickGui gui = new RavenClickGui(
             Arrays.asList("Render", "HUD"),
             Arrays.asList(
                 ModuleRegistry.renderModules,
