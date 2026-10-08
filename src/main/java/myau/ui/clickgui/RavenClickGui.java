@@ -144,7 +144,6 @@ import java.util.Map;
 
    String hint = "LMB toggle  •  RMB settings  •  ESC close";
    GuiRender.textNoShadow(hint, sw - GuiRender.textW(hint) - 12, 10, MUTED);
-  ```
 
   }
 
