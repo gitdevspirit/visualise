@@ -1,0 +1,96 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write   # needed to create releases and tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDKs (8 for the Forge 1.8.9 toolchain, 17 to run Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Read version
+        id: meta
+        run: |
+          VERSION=$(grep -E '^version\s*=' gradle.properties | head -1 | sed 's/.*=\s*//' | tr -d '[:space:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: ./gradlew build --stacktrace
+
+      - name: Locate jar
+        id: jar
+        run: |
+          JAR=$(ls build/libs/*.jar | grep -v -- '-sources' | head -n 1)
+          echo "Built: $JAR"
+          echo "path=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spirit-Visuals-${{ steps.meta.outputs.version }}-${{ github.run_number }}
+          path: ${{ steps.jar.outputs.path }}
+          if-no-files-found: error
+
+      # Release on every push to main (tagged build-<run number>)
+      - name: Publish release (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Spirit Visuals ${{ steps.meta.outputs.version }} (build ${{ github.run_number }})
+          body: |
+            Automated build from commit ${{ github.sha }}
+
+            **Changes:** ${{ github.event.head_commit.message }}
+          files: ${{ steps.jar.outputs.path }}
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+
+      # Release when you push a version tag, e.g. `git tag v1.0.0 && git push origin v1.0.0`
+      - name: Publish release (tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Spirit Visuals ${{ github.ref_name }}
+          generate_release_notes: true
+          files: ${{ steps.jar.outputs.path }}
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+
+      - name: Summary
+        run: |
+          echo "### Build complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Jar:** \`${{ steps.jar.outputs.path }}\`" >> "$GITHUB_STEP_SUMMARY"
