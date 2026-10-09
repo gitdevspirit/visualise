@@ -23,6 +23,7 @@ public class ModuleRegistry {
         renderModules.add(Myau.moduleManager.getModule(Tracers.class));
         renderModules.add(Myau.moduleManager.getModule(NameTags.class));
         renderModules.add(Myau.moduleManager.getModule(BedESP.class));
+        renderModules.add(Myau.moduleManager.getModule(BedPlates.class));
         renderModules.add(Myau.moduleManager.getModule(ItemESP.class));
         renderModules.add(Myau.moduleManager.getModule(ChestESP.class));
         renderModules.add(Myau.moduleManager.getModule(Xray.class));
