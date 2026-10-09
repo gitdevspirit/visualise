@@ -28,8 +28,8 @@ public class AutoClicker extends Module {
     // Click state
     private boolean clickPending    = false;
     private long    clickDelay      = 0L;
-    private boolean blockHitPending = false;
-    private long    blockHitDelay   = 0L;
+    private boolean rightPending    = false;
+    private long    rightDelay      = 0L;
 
     // Exhaust simulation
     private long exhaustCooldown = 0L;
@@ -39,6 +39,10 @@ public class AutoClicker extends Module {
     // ═══════════════════════════════════════════════════════════════════
     // CORE SETTINGS
     // ═══════════════════════════════════════════════════════════════════
+    public final BooleanSetting  leftClicker    = register(new BooleanSetting("Left Clicker", true));
+    public final BooleanSetting  rightClicker   = register(new BooleanSetting("Right Clicker", false));
+    public final SliderSetting   rightCPS       = register(new SliderSetting("  Right CPS", 10, 1, 25, 1, () -> rightClicker.getValue()));
+    public final BooleanSetting  rightBlocksOnly = register(new BooleanSetting("  Blocks Only", true, () -> rightClicker.getValue()));
     public final DropdownSetting clickPattern   = register(new DropdownSetting("Click Pattern", 0, "JITTER", "BUTTERFLY"));
     public final SliderSetting   targetCPS      = register(new SliderSetting("Target CPS", 12, 1, 25, 1));
     public final BooleanSetting  randomize      = register(new BooleanSetting("Randomize", true));
@@ -70,8 +74,6 @@ public class AutoClicker extends Module {
     // ═══════════════════════════════════════════════════════════════════
     // LEGACY SETTINGS (kept for compatibility)
     // ═══════════════════════════════════════════════════════════════════
-    public final BooleanSetting blockHit         = register(new BooleanSetting("Block Hit", false));
-    public final SliderSetting  blockHitTicks    = register(new SliderSetting("  BH Ticks", 1.5, 1.0, 20.0, 0.5));
     public final BooleanSetting allowTools       = register(new BooleanSetting("Allow Tools", false));
     public final SliderSetting  range            = register(new SliderSetting("Range", 3.0, 3.0, 8.0, 0.1));
     public final SliderSetting  hitBoxVertical   = register(new SliderSetting("HB Vertical", 0.1, 0.0, 1.0, 0.05));
@@ -115,8 +117,22 @@ public class AutoClicker extends Module {
         return (long) (1000.0 / cps);
     }
 
-    private long getBlockHitDelay() {
-        return (long)(50.0F * (float) blockHitTicks.getValue());
+    private long getRightDelay() {
+        double cps = rightCPS.getValue();
+        if (randomize.getValue()) {
+            double variance = randomVariance.getValue() / 100.0;
+            double min = cps * (1.0 - variance);
+            double max = cps * (1.0 + variance);
+            cps = min + (max - min) * random.nextDouble();
+        }
+        return (long) (1000.0 / cps);
+    }
+
+    private boolean canRightClick() {
+        if (mc.currentScreen != null) return false;
+        if (mc.thePlayer.isUsingItem()) return false;
+        if (rightBlocksOnly.getValue() && !ItemUtil.isHoldingBlock()) return false;
+        return true;
     }
 
     private boolean isBreakingBlock() {
@@ -217,25 +233,35 @@ public class AutoClicker extends Module {
 
         if (event.getType() == EventType.PRE) {
             if (clickDelay > 0L)    clickDelay    -= 50L;
-            if (blockHitDelay > 0L) blockHitDelay -= 50L;
+            if (rightDelay > 0L)    rightDelay    -= 50L;
 
             updateExhaust();
 
             if (mc.currentScreen != null && !isInInventory()) {
                 clickPending = false;
-                blockHitPending = false;
+                rightPending = false;
             } else {
                 if (clickPending) {
                     clickPending = false;
                     KeyBindUtil.updateKeyState(mc.gameSettings.keyBindAttack.getKeyCode());
                 }
-                if (blockHitPending) {
-                    blockHitPending = false;
+                if (rightPending) {
+                    rightPending = false;
                     KeyBindUtil.updateKeyState(mc.gameSettings.keyBindUseItem.getKeyCode());
                 }
 
+                // Right clicker: repeat the use key while it is held
+                if (rightClicker.getValue() && canRightClick() && mc.gameSettings.keyBindUseItem.isKeyDown()) {
+                    while (rightDelay <= 0L) {
+                        rightPending = true;
+                        rightDelay += getRightDelay();
+                        KeyBindUtil.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+                        KeyBindUtil.pressKeyOnce(mc.gameSettings.keyBindUseItem.getKeyCode());
+                    }
+                }
+
                 // Handle inventory clicking
-                if (isInInventory() && inventoryClick.getValue()) {
+                if (leftClicker.getValue() && isInInventory() && inventoryClick.getValue()) {
                     if (canClick() && mc.gameSettings.keyBindAttack.isKeyDown()) {
                         // Limit inventory CPS if randomize is enabled
                         double maxInvCPS = inventoryCPS.getValue();
@@ -253,24 +279,13 @@ public class AutoClicker extends Module {
                     }
                 }
                 // Handle normal clicking
-                else if (canClick() && mc.gameSettings.keyBindAttack.isKeyDown()) {
+                else if (leftClicker.getValue() && canClick() && mc.gameSettings.keyBindAttack.isKeyDown()) {
                     while (clickDelay <= 0L) {
                         clickPending = true;
                         clickDelay  += getNextClickDelay();
                         clicksSinceExhaust++;
                         KeyBindUtil.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
                         KeyBindUtil.pressKeyOnce(mc.gameSettings.keyBindAttack.getKeyCode());
-                    }
-
-                    if (blockHit.getValue() && blockHitDelay <= 0L
-                            && mc.gameSettings.keyBindUseItem.isKeyDown()
-                            && ItemUtil.isHoldingSword()) {
-                        blockHitPending = true;
-                        KeyBindUtil.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
-                        if (!mc.thePlayer.isUsingItem()) {
-                            blockHitDelay += getBlockHitDelay();
-                            KeyBindUtil.pressKeyOnce(mc.gameSettings.keyBindUseItem.getKeyCode());
-                        }
                     }
                 }
             }
@@ -279,14 +294,14 @@ public class AutoClicker extends Module {
 
     @EventTarget(Priority.LOWEST)
     public void onCLick(LeftClickMouseEvent event) {
-        if (isEnabled() && !event.isCancelled() && !clickPending)
+        if (isEnabled() && leftClicker.getValue() && !event.isCancelled() && !clickPending)
             clickDelay += getNextClickDelay();
     }
 
     @Override
     public void onEnabled() {
         clickDelay    = 0L;
-        blockHitDelay = 0L;
+        rightDelay    = 0L;
         exhaustCooldown = System.currentTimeMillis() + (long)(exhaustInterval.getValue() * 1000);
         clicksSinceExhaust = 0;
         isExhausted = false;
@@ -296,7 +311,7 @@ public class AutoClicker extends Module {
     public void onDisabled() {
         // hand the attack / use keys back to the real keyboard and mouse
         clickPending = false;
-        blockHitPending = false;
+        rightPending = false;
         if (mc.gameSettings != null) {
             KeyBindUtil.updateKeyState(mc.gameSettings.keyBindAttack.getKeyCode());
             KeyBindUtil.updateKeyState(mc.gameSettings.keyBindUseItem.getKeyCode());
@@ -307,6 +322,9 @@ public class AutoClicker extends Module {
     public String[] getSuffix() {
         String pattern = clickPattern.getIndex() == 0 ? "Jitter" : "Butterfly";
         String exhaust = isExhausted ? " (Exhausted)" : "";
-        return new String[]{String.format("%s %d CPS%s", pattern, (int)targetCPS.getValue(), exhaust)};
+        String left  = leftClicker.getValue()  ? String.format("L %s %d CPS%s", pattern, (int)targetCPS.getValue(), exhaust) : "";
+        String right = rightClicker.getValue() ? String.format("R %d CPS", (int)rightCPS.getValue()) : "";
+        String joined = left.isEmpty() ? right : (right.isEmpty() ? left : left + " | " + right);
+        return new String[]{joined};
     }
 }
