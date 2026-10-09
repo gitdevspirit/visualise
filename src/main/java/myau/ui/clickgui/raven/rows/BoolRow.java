@@ -41,6 +41,11 @@ public class BoolRow extends SettingRow {
     }
 
     @Override
+    protected float rightWidth() {
+        return 16f;
+    }
+
+    @Override
     public boolean mouseClicked(int mx, int my, int button) {
         if (button == 0) {
             setter.accept(!getter.getAsBoolean());
