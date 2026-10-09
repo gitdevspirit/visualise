@@ -6,6 +6,7 @@ import myau.module.modules.GuiModule;
 import myau.ui.clickgui.GuiRender;
 import myau.ui.clickgui.raven.rows.SettingRow;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
@@ -86,11 +87,17 @@ public class RavenClickGui extends GuiScreen {
             scrollApplied += step;
         }
 
+        // The game leaves face culling on, which silently drops every filled rect we draw.
+        GlStateManager.disableCull();
+
         GuiRender.rect(0, 0, width, height, Theme.alpha(0x000000, (int) (0x70 * openAnim)));
 
         for (CategoryPanel p : panels) {
             p.draw(mouseX, mouseY, dt);
         }
+
+        GlStateManager.enableCull();
+        GlStateManager.color(1f, 1f, 1f, 1f);
     }
 
     @Override
