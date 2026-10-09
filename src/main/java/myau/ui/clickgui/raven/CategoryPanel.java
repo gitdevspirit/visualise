@@ -43,6 +43,7 @@ public class CategoryPanel {
 
         float h = getHeight();
         GuiRender.rect(x - 1f, y - 1f, Theme.PANEL_W + 2f, h + 2f, 0x58000000);
+        GuiRender.rect(x, y, Theme.PANEL_W, h, Theme.PANEL_BACKDROP);   // column background
 
         // header
         GuiRender.rect(x, y, Theme.PANEL_W, Theme.HEADER_H, Theme.HEADER_BG);
