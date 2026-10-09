@@ -1,5 +1,6 @@
 package myau.ui.clickgui.raven.rows;
 
+import myau.ui.clickgui.GuiRender;
 import myau.ui.clickgui.raven.Theme;
 import myau.util.KeyBindUtil;
 import org.lwjgl.input.Keyboard;
@@ -26,11 +27,18 @@ public class BindRow extends SettingRow {
         drawBase(mx, my);
         drawLabel(Theme.TEXT_ROW);
         if (listening) {
-            drawRight("press a key...", accent);
+            drawRight("...", accent);
         } else {
             int key = getter.getAsInt();
             drawRight(key == 0 ? "None" : "[" + KeyBindUtil.getKeyName(key) + "]", key == 0 ? Theme.TEXT_DIM : Theme.TEXT_ON);
         }
+    }
+
+    @Override
+    protected float rightWidth() {
+        if (listening) return GuiRender.textW("...");
+        int key = getter.getAsInt();
+        return GuiRender.textW(key == 0 ? "None" : "[" + KeyBindUtil.getKeyName(key) + "]");
     }
 
     @Override
