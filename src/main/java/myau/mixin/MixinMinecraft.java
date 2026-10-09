@@ -4,6 +4,7 @@ import myau.Myau;
 import myau.event.EventManager;
 import myau.event.types.EventType;
 import myau.events.KeyEvent;
+import myau.events.LeftClickMouseEvent;
 import myau.events.LoadWorldEvent;
 import myau.events.ResizeEvent;
 import myau.events.TickEvent;
@@ -62,6 +63,15 @@ public abstract class MixinMinecraft {
     )
     private void loadWorld(WorldClient worldClient, String string, CallbackInfo callbackInfo) {
         EventManager.call(new LoadWorldEvent());
+    }
+
+    @Inject(method = {"clickMouse"}, at = {@At("HEAD")}, cancellable = true)
+    private void clickMouse(CallbackInfo callbackInfo) {
+        LeftClickMouseEvent event = new LeftClickMouseEvent();
+        EventManager.call(event);
+        if (event.isCancelled()) {
+            callbackInfo.cancel();
+        }
     }
 
     @Inject(method = {"updateFramebufferSize"}, at = {@At("RETURN")})
