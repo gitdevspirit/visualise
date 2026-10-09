@@ -10,12 +10,17 @@ import java.util.List;
 
 public class ModuleRegistry {
 
+    public static List<Module> combatModules;
     public static List<Module> renderModules;
     public static List<Module> hudModules;
     public static List<Module> movementModules;
 
     public static void init() {
         Comparator<Module> byName = Comparator.comparing(m -> m.getName().toLowerCase());
+
+        combatModules = new ArrayList<>();
+        combatModules.add(Myau.moduleManager.getModule(AutoClicker.class));
+        combatModules.sort(byName);
 
         renderModules = new ArrayList<>();
         renderModules.add(Myau.moduleManager.getModule(ESP.class));
