@@ -55,6 +55,7 @@ public class Myau {
         register(new Tracers());
         register(new NameTags());
         register(new BedESP());
+        register(new BedPlates());
         register(new ItemESP());
         register(new ChestESP());
         register(new Xray());
