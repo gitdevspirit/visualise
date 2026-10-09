@@ -37,7 +37,7 @@ public class RavenClickGui extends GuiScreen {
     public RavenClickGui(List<String> categoryNames, List<List<Module>> categoryModules) {
         float x = 24f;
         for (int i = 0; i < categoryNames.size(); i++) {
-            panels.add(new CategoryPanel(categoryNames.get(i), categoryModules.get(i), x, 24f));
+            panels.add(new CategoryPanel(categoryNames.get(i), categoryModules.get(i), x, 24f, i));
             x += Theme.PANEL_W + 10f;
         }
     }
@@ -85,6 +85,17 @@ public class RavenClickGui extends GuiScreen {
         if (step != 0f) {
             for (CategoryPanel p : panels) p.y += step;
             scrollApplied += step;
+        }
+
+        // Widths follow content; windows the user has not dragged are re-spaced so a wider
+        // window pushes its right-hand neighbours instead of sitting on top of them.
+        List<CategoryPanel> bySlot = new ArrayList<>(panels);
+        bySlot.sort((a, b) -> Integer.compare(a.slot, b.slot));
+        float cursor = 24f;
+        for (CategoryPanel p : bySlot) {
+            p.updateWidth(dt);
+            if (!p.userMoved) p.x = cursor;
+            cursor += p.w + 10f;
         }
 
         // The game leaves face culling on, which silently drops every filled rect we draw.
