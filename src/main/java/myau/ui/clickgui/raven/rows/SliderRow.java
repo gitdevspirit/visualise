@@ -49,6 +49,15 @@ public class SliderRow extends SettingRow {
     }
 
     @Override
+    protected float rightWidth() {
+        // widest of min / max / current so the panel does not jitter while dragging
+        float a = GuiRender.textW(format(min));
+        float b = GuiRender.textW(format(max));
+        float c = GuiRender.textW(format(getter.getAsDouble()));
+        return Math.max(a, Math.max(b, c));
+    }
+
+    @Override
     public boolean mouseClicked(int mx, int my, int button) {
         if (button == 0) {
             dragging = true;
