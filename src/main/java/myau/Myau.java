@@ -46,6 +46,8 @@ public class Myau {
 
         EventManager.register(moduleManager);
 
+        // ── Movement ──
+        register(new Sprint());
         // ── Render ──
         register(new ESP());
         register(new Chams());
