@@ -32,6 +32,7 @@ public final class GuiRender {
         GL11.glVertex2f(x + w, y + h);
         GL11.glVertex2f(x,     y + h);
         GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
     }
@@ -48,6 +49,7 @@ public final class GuiRender {
         setColor(bottomColor); GL11.glVertex2f(x + w, y + h);
         setColor(bottomColor); GL11.glVertex2f(x,     y + h);
         GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glShadeModel(GL11.GL_FLAT);
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
@@ -70,6 +72,7 @@ public final class GuiRender {
             GL11.glVertex2f(x, y); GL11.glVertex2f(x + w, y);
             GL11.glVertex2f(x + w, y + h); GL11.glVertex2f(x, y + h);
             GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         } else {
             float cx = x + w / 2f, cy = y + h / 2f;
             GL11.glBegin(GL11.GL_TRIANGLE_FAN);
@@ -81,6 +84,7 @@ public final class GuiRender {
             arcVertices(x + rad,       y + h - rad,   rad,  90, 180, segs);
             GL11.glVertex2f(x + rad, y); // close back to start
             GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         }
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
@@ -108,6 +112,7 @@ public final class GuiRender {
         GL11.glVertex2f(x,     y + h);
         GL11.glVertex2f(x + rad, y);
         GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
 
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
@@ -134,6 +139,7 @@ public final class GuiRender {
         GL11.glVertex2f(x, y); GL11.glVertex2f(x + w, y);
         GL11.glVertex2f(x + w, y + h); GL11.glVertex2f(x, y + h);
         GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
     }
@@ -176,6 +182,7 @@ public final class GuiRender {
             GL11.glVertex2f(cx + (float)(Math.cos(ang) * r), cy + (float)(Math.sin(ang) * r));
         }
         GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
     }
@@ -234,6 +241,7 @@ public final class GuiRender {
         setColor(leftColor);
         GL11.glVertex2f(x, y + h);
         GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glShadeModel(GL11.GL_FLAT);
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
@@ -250,6 +258,7 @@ public final class GuiRender {
         GL11.glVertex2f(x2, y2);
         GL11.glVertex2f(x3, y3);
         GL11.glEnd();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
     }
