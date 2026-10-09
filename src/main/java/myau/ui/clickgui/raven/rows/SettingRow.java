@@ -25,6 +25,16 @@ public abstract class SettingRow {
         return Theme.ROW_H;
     }
 
+    /** Width of whatever this row draws on its right-hand side (value text, switch, ...). */
+    protected float rightWidth() {
+        return 0f;
+    }
+
+    /** Narrowest panel width at which the label and the right-hand content do not overlap. */
+    public float getMinWidth() {
+        return 6f + GuiRender.textW(name) + 10f + rightWidth() + 6f;
+    }
+
     /** Draws the row and remembers its bounds for hit testing. */
     public final void render(float x, float y, float w, int mx, int my, float dt, int accent) {
         this.x = x;
