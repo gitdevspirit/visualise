@@ -34,6 +34,7 @@ public class ModuleRegistry {
 
         movementModules = new ArrayList<>();
         movementModules.add(Myau.moduleManager.getModule(Sprint.class));
+        movementModules.add(Myau.moduleManager.getModule(LegitScaffold.class));
         movementModules.sort(byName);
 
         hudModules = new ArrayList<>();
