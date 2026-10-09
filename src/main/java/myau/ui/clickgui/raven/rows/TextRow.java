@@ -38,6 +38,12 @@ public class TextRow extends SettingRow {
     }
 
     @Override
+    protected float rightWidth() {
+        String v = getter.get();
+        return Math.min(70f, v == null ? 0f : GuiRender.textW(v + "_"));
+    }
+
+    @Override
     public boolean mouseClicked(int mx, int my, int button) {
         if (button == 0) {
             editing = true;
