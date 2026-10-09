@@ -16,6 +16,7 @@ public final class Theme {
     public static final int ROW_H    = 13;
 
     // ── Palette ──
+    public static final int PANEL_BACKDROP = 0xF2090909;
     public static final int HEADER_BG  = 0xFF0B0B0B;
     public static final int BUTTON_BG  = 0xEB141414;
     public static final int BUTTON_HOV = 0xEB1D1D1D;
