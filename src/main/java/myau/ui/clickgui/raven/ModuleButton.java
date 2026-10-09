@@ -42,6 +42,17 @@ public class ModuleButton {
         return h;
     }
 
+    /** Narrowest width this button needs; includes its settings while they are open. */
+    public float getMinWidth() {
+        float need = 7f + GuiRender.textW(module.getName()) + 18f;
+        if (open) {
+            for (SettingRow row : rows) {
+                if (row.isVisible()) need = Math.max(need, row.getMinWidth());
+            }
+        }
+        return need;
+    }
+
     public float getHeight() {
         return Theme.BUTTON_H + rowsHeight() * openAnim;
     }
