@@ -46,6 +46,8 @@ public class Myau {
 
         EventManager.register(moduleManager);
 
+        // ── Combat ──
+        register(new AutoClicker());
         // ── Movement ──
         register(new Sprint());
         register(new LegitScaffold());
