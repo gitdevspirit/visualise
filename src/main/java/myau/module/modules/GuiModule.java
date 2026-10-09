@@ -27,8 +27,8 @@ public class GuiModule extends Module {
         if (gui == null) {
             ModuleRegistry.init();
             gui = new RavenClickGui(
-                    Arrays.asList("Render", "HUD"),
-                    Arrays.asList(ModuleRegistry.renderModules, ModuleRegistry.hudModules)
+                    Arrays.asList("Render", "HUD", "Movement"),
+                    Arrays.asList(ModuleRegistry.renderModules, ModuleRegistry.hudModules, ModuleRegistry.movementModules)
             );
         }
 
