@@ -1,5 +1,6 @@
 package myau.ui.clickgui.raven.rows;
 
+import myau.ui.clickgui.GuiRender;
 import myau.ui.clickgui.raven.Theme;
 
 import java.util.function.BooleanSupplier;
@@ -23,6 +24,12 @@ public class ModeRow extends SettingRow {
         drawBase(mx, my);
         drawLabel(Theme.TEXT_ROW);
         drawRight(getter.get(), accent);
+    }
+
+    @Override
+    protected float rightWidth() {
+        String v = getter.get();
+        return v == null ? 0f : GuiRender.textW(v);
     }
 
     @Override
