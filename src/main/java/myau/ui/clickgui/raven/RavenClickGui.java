@@ -25,6 +25,11 @@ public class RavenClickGui extends GuiScreen {
 
     private float openAnim;
     private long lastFrame;
+    /**
+     * The key press that opens the GUI is delivered to this screen in the same tick, so the toggle
+     * key must be released once before it is allowed to close the GUI again.
+     */
+    private boolean toggleArmed;
     private float scrollTarget;
     private float scrollApplied;
 
@@ -40,6 +45,8 @@ public class RavenClickGui extends GuiScreen {
     public void initGui() {
         super.initGui();
         Keyboard.enableRepeatEvents(true);
+        Module toggle = Myau.moduleManager.getModule(GuiModule.class);
+        toggleArmed = toggle == null || toggle.getKey() <= 0 || !Keyboard.isKeyDown(toggle.getKey());
         openAnim = 0f;
         lastFrame = System.nanoTime();
     }
@@ -121,6 +128,15 @@ public class RavenClickGui extends GuiScreen {
     }
 
     @Override
+    public void handleKeyboardInput() throws IOException {
+        Module toggle = Myau.moduleManager.getModule(GuiModule.class);
+        if (toggle != null && !Keyboard.getEventKeyState() && Keyboard.getEventKey() == toggle.getKey()) {
+            toggleArmed = true;
+        }
+        super.handleKeyboardInput();
+    }
+
+    @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
         SettingRow capturing = findCapturing();
         if (capturing != null) {
@@ -129,7 +145,7 @@ public class RavenClickGui extends GuiScreen {
         }
 
         Module gui = Myau.moduleManager.getModule(GuiModule.class);
-        if (keyCode == Keyboard.KEY_ESCAPE || (gui != null && keyCode == gui.getKey())) {
+        if (keyCode == Keyboard.KEY_ESCAPE || (toggleArmed && gui != null && keyCode == gui.getKey())) {
             this.mc.displayGuiScreen(null);
         }
     }
