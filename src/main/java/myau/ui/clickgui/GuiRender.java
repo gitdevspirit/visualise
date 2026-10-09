@@ -219,6 +219,41 @@ public final class GuiRender {
 
     // ── Color helpers ─────────────────────────────────────────────────────────
 
+    /** Horizontal gradient - left to right. */
+    public static void rectGradientH(float x, float y, float w, float h, int leftColor, int rightColor) {
+        GlStateManager.enableBlend();
+        GlStateManager.disableTexture2D();
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
+        GL11.glShadeModel(GL11.GL_SMOOTH);
+        GL11.glBegin(GL11.GL_QUADS);
+        setColor(leftColor);
+        GL11.glVertex2f(x, y);
+        setColor(rightColor);
+        GL11.glVertex2f(x + w, y);
+        GL11.glVertex2f(x + w, y + h);
+        setColor(leftColor);
+        GL11.glVertex2f(x, y + h);
+        GL11.glEnd();
+        GL11.glShadeModel(GL11.GL_FLAT);
+        GlStateManager.enableTexture2D();
+        GlStateManager.disableBlend();
+    }
+
+    /** Solid triangle. */
+    public static void triangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) {
+        GlStateManager.enableBlend();
+        GlStateManager.disableTexture2D();
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
+        setColor(color);
+        GL11.glBegin(GL11.GL_TRIANGLES);
+        GL11.glVertex2f(x1, y1);
+        GL11.glVertex2f(x2, y2);
+        GL11.glVertex2f(x3, y3);
+        GL11.glEnd();
+        GlStateManager.enableTexture2D();
+        GlStateManager.disableBlend();
+    }
+
     private static void setColor(int c) {
         GL11.glColor4f((c >> 16 & 0xFF) / 255f, (c >> 8 & 0xFF) / 255f, (c & 0xFF) / 255f, (c >> 24 & 0xFF) / 255f);
     }
