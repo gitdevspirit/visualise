@@ -1,0 +1,106 @@
+package myau.ui.clickgui.raven;
+
+import myau.module.Module;
+import myau.ui.clickgui.GuiRender;
+import myau.ui.clickgui.raven.rows.SettingRow;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** A draggable window holding one category's modules. Right click the header to collapse. */
+public class CategoryPanel {
+
+    public final String name;
+    public float x, y;
+    public boolean collapsed;
+
+    private final List<ModuleButton> buttons = new ArrayList<>();
+    private boolean dragging;
+    private float dragOffX, dragOffY;
+
+    public CategoryPanel(String name, List<Module> modules, float x, float y) {
+        this.name = name;
+        this.x = x;
+        this.y = y;
+        for (Module m : modules) {
+            if (m != null) buttons.add(new ModuleButton(m));
+        }
+    }
+
+    public float getHeight() {
+        float h = Theme.HEADER_H;
+        if (!collapsed) {
+            for (ModuleButton b : buttons) h += b.getHeight();
+        }
+        return h;
+    }
+
+    public void draw(int mx, int my, float dt) {
+        if (dragging) {
+            x = mx - dragOffX;
+            y = my - dragOffY;
+        }
+
+        float h = getHeight();
+        GuiRender.rect(x - 1f, y - 1f, Theme.PANEL_W + 2f, h + 2f, 0x58000000);
+
+        // header
+        GuiRender.rect(x, y, Theme.PANEL_W, Theme.HEADER_H, Theme.HEADER_BG);
+        GuiRender.rectGradientH(x, y + Theme.HEADER_H - 1f, Theme.PANEL_W, 1f, Theme.accent(0f), Theme.accent(1f));
+        float ty = y + (Theme.HEADER_H - GuiRender.textH()) / 2f;
+        GuiRender.text(name, x + 7f, ty, Theme.TEXT_ON);
+
+        int enabled = 0;
+        for (ModuleButton b : buttons) if (b.isOn()) enabled++;
+        String count = enabled + "/" + buttons.size();
+        GuiRender.textNoShadow(count, x + Theme.PANEL_W - 7f - GuiRender.textW(count), ty + 1f,
+                enabled > 0 ? Theme.accent(0.5f) : Theme.TEXT_DIM);
+
+        if (collapsed) return;
+
+        float cy = y + Theme.HEADER_H;
+        int n = buttons.size();
+        for (int i = 0; i < n; i++) {
+            ModuleButton b = buttons.get(i);
+            float t = n <= 1 ? 0f : (float) i / (n - 1);
+            b.draw(x, cy, Theme.PANEL_W, mx, my, dt, Theme.accent(t));
+            cy += b.getHeight();
+        }
+    }
+
+    /** True if the click hit this panel. */
+    public boolean mouseClicked(int mx, int my, int button) {
+        if (mx >= x && mx <= x + Theme.PANEL_W && my >= y && my < y + Theme.HEADER_H) {
+            if (button == 0) {
+                dragging = true;
+                dragOffX = mx - x;
+                dragOffY = my - y;
+            } else if (button == 1) {
+                collapsed = !collapsed;
+            }
+            return true;
+        }
+        if (collapsed) return false;
+        for (ModuleButton b : buttons) {
+            if (b.mouseClicked(mx, my, button)) return true;
+        }
+        return false;
+    }
+
+    public void mouseReleased() {
+        dragging = false;
+        for (ModuleButton b : buttons) b.mouseReleased();
+    }
+
+    public SettingRow findCapturing() {
+        for (ModuleButton b : buttons) {
+            SettingRow row = b.findCapturing();
+            if (row != null) return row;
+        }
+        return null;
+    }
+
+    public void stopCapturing() {
+        for (ModuleButton b : buttons) b.stopCapturing();
+    }
+}
