@@ -48,6 +48,7 @@ public class Myau {
 
         // ── Movement ──
         register(new Sprint());
+        register(new LegitScaffold());
         // ── Render ──
         register(new ESP());
         register(new Chams());
