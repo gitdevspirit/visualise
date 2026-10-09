@@ -92,6 +92,11 @@ public class ColorRow extends SettingRow {
     }
 
     @Override
+    protected float rightWidth() {
+        return 14f;
+    }
+
+    @Override
     public boolean mouseClicked(int mx, int my, int button) {
         if (button != 0) return false;
         for (int i = 0; i < 3; i++) {
