@@ -12,6 +12,7 @@ public class ModuleRegistry {
 
     public static List<Module> renderModules;
     public static List<Module> hudModules;
+    public static List<Module> movementModules;
 
     public static void init() {
         Comparator<Module> byName = Comparator.comparing(m -> m.getName().toLowerCase());
@@ -30,6 +31,10 @@ public class ModuleRegistry {
         renderModules.add(Myau.moduleManager.getModule(ViewClip.class));
         renderModules.add(Myau.moduleManager.getModule(NoHurtCam.class));
         renderModules.sort(byName);
+
+        movementModules = new ArrayList<>();
+        movementModules.add(Myau.moduleManager.getModule(Sprint.class));
+        movementModules.sort(byName);
 
         hudModules = new ArrayList<>();
         hudModules.add(Myau.moduleManager.getModule(HUD.class));
