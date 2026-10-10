@@ -11,9 +11,6 @@ import myau.util.RenderUtil;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.WorldRenderer;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.init.Blocks;
@@ -170,6 +167,10 @@ public class ItemESP extends Module {
             .sorted((a, b) -> Integer.compare(getPriority(b.getKey().itemId), getPriority(a.getKey().itemId)))
             .collect(Collectors.toList());
 
+        // NOT pushAttrib/popAttrib: that restores raw GL flags behind GlStateManager's cache, which
+        // leaves lighting / blend / alpha out of sync for everything drawn after this (flat or gray
+        // nametags, dark items). Remember what we change and put it back through GlStateManager.
+        boolean lightingWas = GL11.glIsEnabled(GL11.GL_LIGHTING);
         GlStateManager.pushMatrix();
         GlStateManager.disableLighting();
 
@@ -212,58 +213,50 @@ public class ItemESP extends Module {
             double fs = -(0.025 + 0.02 * ((Math.max(6.0, dist) - 6.0) / 28.0));
             GlStateManager.scale(fs, fs, 1.0);
 
-            // Label state. Culling must be OFF: RenderUtil.disableRenderState() (used by the
-            // outline) turns it back on, which made the flat background quad back-facing/culled.
-            GlStateManager.disableLighting();
             GlStateManager.disableDepth();
-            GlStateManager.disableCull();
             GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            // Set the blend function explicitly: whatever ran before us may have left it on
+            // something else, which washes the text and the pill out.
+            GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+            GlStateManager.enableAlpha();
 
             float tw = mc.fontRendererObj.getStringWidth(label) / 2f;
             float th = mc.fontRendererObj.FONT_HEIGHT / 2f;
 
             // Dark background pill
-            int bgAlpha = (int) (bgOpacity.getValue() / 100.0 * 255.0);
+            int bgAlpha = (int)(bgOpacity.getValue() / 100.0 * 255.0);
+            int bgColor = (bgAlpha << 24) | 0x000000;
             float pad = 2f;
-            drawFlatRect(-tw - pad, -th - pad, tw + pad, th + pad, bgAlpha << 24);
+            drawFlatRect(-tw - pad, -th - pad, tw + pad, th + pad, bgColor);
 
             // Colored text with shadow
             int textColor = (255 << 24) | (cr << 16) | (cg << 8) | cb;
-            GlStateManager.enableTexture2D();
-            GlStateManager.enableAlpha();
             mc.fontRendererObj.drawStringWithShadow(label, -tw, -th, textColor);
 
+            GlStateManager.disableBlend();
+            GlStateManager.enableDepth();
             GlStateManager.popMatrix();
         }
 
-        GlStateManager.popMatrix();
-
-        // Restore state through GlStateManager only so its cache stays in sync.
-        GlStateManager.enableDepth();
-        GlStateManager.enableCull();
-        GlStateManager.disableBlend();
-        GlStateManager.enableLighting();
+        if (lightingWas) GlStateManager.enableLighting(); else GlStateManager.disableLighting();
         GlStateManager.color(1f, 1f, 1f, 1f);
+        GlStateManager.popMatrix();
     }
 
-    /** Draws a flat (non-3D) rect in the current GL matrix space. */
+    /** Draws a flat (non-3D) rect in the current GL matrix space */
     private void drawFlatRect(float x1, float y1, float x2, float y2, int color) {
-        int a = (color >> 24) & 0xFF;
-        int r = (color >> 16) & 0xFF;
-        int g = (color >>  8) & 0xFF;
-        int b =  color        & 0xFF;
-
+        float a = ((color >> 24) & 0xFF) / 255f;
+        float r = ((color >> 16) & 0xFF) / 255f;
+        float g = ((color >>  8) & 0xFF) / 255f;
+        float b = ( color        & 0xFF) / 255f;
         GlStateManager.disableTexture2D();
-        Tessellator tessellator = Tessellator.getInstance();
-        WorldRenderer wr = tessellator.getWorldRenderer();
-        wr.begin(7, DefaultVertexFormats.POSITION_COLOR);
-        wr.pos(x1, y2, 0).color(r, g, b, a).endVertex();
-        wr.pos(x2, y2, 0).color(r, g, b, a).endVertex();
-        wr.pos(x2, y1, 0).color(r, g, b, a).endVertex();
-        wr.pos(x1, y1, 0).color(r, g, b, a).endVertex();
-        tessellator.draw();
+        GlStateManager.color(r, g, b, a);
+        GL11.glBegin(GL11.GL_QUADS);
+        GL11.glVertex2f(x1, y2); GL11.glVertex2f(x2, y2);
+        GL11.glVertex2f(x2, y1); GL11.glVertex2f(x1, y1);
+        GL11.glEnd();
         GlStateManager.enableTexture2D();
+        GlStateManager.color(1f, 1f, 1f, 1f);
     }
 
     // ── ItemData ──────────────────────────────────────────────────────────────
@@ -276,7 +269,7 @@ public class ItemESP extends Module {
         public ItemData(int id, double x, double y, double z) {
             this.itemId = id;
             this.x = x; this.y = y; this.z = z;
-            this.hashCode = Objects.hash(id, (int) x, (int) y, (int) z);
+            this.hashCode = Objects.hash(id, (int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
         }
 
         @Override
@@ -284,8 +277,8 @@ public class ItemESP extends Module {
             if (this == o) return true;
             if (!(o instanceof ItemData)) return false;
             ItemData d = (ItemData) o;
-            return itemId == d.itemId && (int) x == (int) d.x
-                && (int) y == (int) d.y && (int) z == (int) d.z;
+            return itemId == d.itemId && Math.floor(x) == Math.floor(d.x)
+                && Math.floor(y) == Math.floor(d.y) && Math.floor(z) == Math.floor(d.z);
         }
 
         @Override public int hashCode() { return hashCode; }
