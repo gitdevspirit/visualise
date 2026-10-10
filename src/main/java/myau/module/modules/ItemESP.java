@@ -37,12 +37,14 @@ public class ItemESP extends Module {
     public final BooleanSetting diamonds = new BooleanSetting("Diamonds", true);
     public final BooleanSetting gold     = new BooleanSetting("Gold",     true);
     public final BooleanSetting iron     = new BooleanSetting("Iron",     true);
+    public final BooleanSetting debug    = new BooleanSetting("Debug (chat)", false);
+    private long lastDebug;
 
     public ItemESP() {
         super("ItemESP", false);
         register(outline); register(bgOpacity);
         register(emeralds); register(diamonds);
-        register(gold);     register(iron);
+        register(gold);     register(iron); register(debug);
     }
 
     // ── Item type helpers ─────────────────────────────────────────────────────
@@ -150,6 +152,9 @@ public class ItemESP extends Module {
 
         // Collect + merge items at same block position
         LinkedHashMap<ItemData, Integer> itemMap = new LinkedHashMap<>();
+        boolean dbg = debug.getValue() && System.currentTimeMillis() - lastDebug > 2000;
+        StringBuilder dbgOut = dbg ? new StringBuilder() : null;
+        int dbgTotal = 0;
         for (Entity entity : mc.theWorld.loadedEntityList) {
             if (!(entity instanceof EntityItem)) continue;
             if (entity.isDead) continue;
@@ -159,7 +164,13 @@ public class ItemESP extends Module {
             if (stack == null || stack.stackSize <= 0) continue;
 
             int id = Item.getIdFromItem(stack.getItem());
-            if (!shouldShow(id)) continue;
+            boolean show = shouldShow(id);
+            if (dbg) {
+                dbgTotal++;
+                String n = String.valueOf(Item.itemRegistry.getNameForObject(stack.getItem()));
+                if (dbgOut.length() < 400) dbgOut.append(n.replace("minecraft:", "")).append(show ? "+ " : "- ");
+            }
+            if (!show) continue;
 
             double x = RenderUtil.lerpDouble(ei.posX, ei.lastTickPosX, event.getPartialTicks());
             double y = RenderUtil.lerpDouble(ei.posY, ei.lastTickPosY, event.getPartialTicks());
@@ -169,6 +180,11 @@ public class ItemESP extends Module {
             itemMap.merge(data, stack.stackSize, Integer::sum);
         }
 
+        if (dbg) {
+            lastDebug = System.currentTimeMillis();
+            mc.thePlayer.addChatMessage(new net.minecraft.util.ChatComponentText(
+                "\u00A77[ItemESP] items=" + dbgTotal + " shown=" + itemMap.size() + " : " + dbgOut));
+        }
         if (itemMap.isEmpty()) return;
 
         IAccessorRenderManager rm = (IAccessorRenderManager) mc.getRenderManager();
