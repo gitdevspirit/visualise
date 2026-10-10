@@ -57,7 +57,8 @@ public class ItemESP extends Module {
     private boolean isEmerald(int id) {
         Item item = Item.getItemById(id);
         Block b = Block.getBlockFromItem(item);
-        return item == Items.emerald || b == Blocks.emerald_block || b == Blocks.emerald_ore;
+        return item == Items.emerald || b == Blocks.emerald_block || b == Blocks.emerald_ore
+            || nameHas(item, "emerald");
     }
 
     private boolean isDiamond(int id) {
@@ -69,7 +70,14 @@ public class ItemESP extends Module {
             || item == Items.diamond_hoe        || item == Items.diamond_helmet
             || item == Items.diamond_chestplate || item == Items.diamond_leggings
             || item == Items.diamond_boots      || b == Blocks.diamond_block
-            || b == Blocks.diamond_ore;
+            || b == Blocks.diamond_ore || nameHas(item, "diamond");
+    }
+
+    /** Fallback by registry name, so a generator item that isn't the exact vanilla constant still matches. */
+    private static boolean nameHas(Item item, String part) {
+        if (item == null) return false;
+        Object n = Item.itemRegistry.getNameForObject(item);
+        return n != null && n.toString().contains(part);
     }
 
     private boolean isGold(int id) {
@@ -143,8 +151,8 @@ public class ItemESP extends Module {
         // Collect + merge items at same block position
         LinkedHashMap<ItemData, Integer> itemMap = new LinkedHashMap<>();
         for (Entity entity : mc.theWorld.loadedEntityList) {
-            if (entity.ticksExisted < 3) continue;
             if (!(entity instanceof EntityItem)) continue;
+            if (entity.isDead) continue;
 
             EntityItem ei = (EntityItem) entity;
             ItemStack stack = ei.getEntityItem();
