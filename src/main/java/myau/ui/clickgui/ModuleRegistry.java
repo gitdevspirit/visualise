@@ -20,6 +20,7 @@ public class ModuleRegistry {
 
         combatModules = new ArrayList<>();
         combatModules.add(Myau.moduleManager.getModule(AutoClicker.class));
+        combatModules.add(Myau.moduleManager.getModule(AimAssist.class));
         combatModules.sort(byName);
 
         renderModules = new ArrayList<>();

@@ -48,6 +48,7 @@ public class Myau {
 
         // ── Combat ──
         register(new AutoClicker());
+        register(new AimAssist());
         // ── Movement ──
         register(new Sprint());
         register(new LegitScaffold());
