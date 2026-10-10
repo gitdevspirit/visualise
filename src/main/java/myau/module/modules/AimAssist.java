@@ -23,12 +23,14 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * AimAssist - picks a target point (with optional multipoint spread) and smoothly
- * rotates the real camera toward it once per tick.
+ * AimAssist, rebuilt from the keystrokesmod reference. Each tick (while the conditions are met) it
+ * picks the best target, picks an aim point on it (optionally spread over the hitbox) and smoothly
+ * turns the real camera toward that point.
  *
- * NOTE: the original module also had a "Silent" mode (fake rotation via UpdateEvent +
- * RotationState + MovementFix). Those classes, and anything that fires UpdateEvent, are
- * not part of this visuals-only repo, so only the Normal (real camera) mode is included.
+ * The reference also has a "Silent" mode that rewrites the rotation sent to the server through a
+ * ClientRotationEvent + RotationHelper movement fix. Visualise has neither, so only the Normal
+ * (real camera) mode is implemented. The reference also yields to KillAura / BedAura; those modules
+ * do not exist here.
  */
 public class AimAssist extends Module {
     private static final Minecraft mc = Minecraft.getMinecraft();
@@ -43,9 +45,9 @@ public class AimAssist extends Module {
 
     public final BooleanSetting ignoreBehindWalls    = register(new BooleanSetting("Ignore Behind Walls", false));
     public final BooleanSetting ignoreBehindEntities = register(new BooleanSetting("Ignore Behind Entities", false));
-    public final BooleanSetting aimInvis        = register(new BooleanSetting("Aim Invisible", false));
-    public final BooleanSetting clickAim        = register(new BooleanSetting("Require Mouse", true));
-    public final BooleanSetting ignoreTeammates = register(new BooleanSetting("Ignore Teammates", true));
+    public final BooleanSetting aimInvis         = register(new BooleanSetting("Aim Invisible", false));
+    public final BooleanSetting clickAim         = register(new BooleanSetting("Require Mouse", true));
+    public final BooleanSetting ignoreTeammates  = register(new BooleanSetting("Ignore Teammates", true));
     public final BooleanSetting stopWhenBreaking = register(new BooleanSetting("Stop When Breaking", false));
     public final SliderSetting  hoverDelay = register(new SliderSetting(
             "Hover Delay", 100, 0, 500, 10, () -> stopWhenBreaking.getValue()));
@@ -60,18 +62,18 @@ public class AimAssist extends Module {
         miningStartTime = -1L;
     }
 
-    // ── Real camera, once per tick ──────────────────────────────────────────────
+    // ── per-tick update (reference: onUpdate) ───────────────────────────────────
 
     @EventTarget
     public void onTick(TickEvent event) {
-        if (!isEnabled() || event.getType() != EventType.POST) return;
+        if (!isEnabled() || event.getType() != EventType.PRE) return;
         if (mc.thePlayer == null || mc.theWorld == null) return;
         if (!conditionsMet()) return;
 
         EntityPlayer target = getEnemy();
         if (target == null) return;
 
-        float[] rot = getRotationsToTarget(target, mc.thePlayer.rotationYaw, mc.thePlayer.rotationPitch);
+        float[] rot = getRotationsToTarget(target);
         if (rot == null) return;
 
         mc.thePlayer.rotationYaw     = rot[0];
@@ -79,21 +81,26 @@ public class AimAssist extends Module {
         mc.thePlayer.rotationYawHead = rot[0];
     }
 
-    /** Picks a point on the target and computes rotations toward it. */
-    private float[] getRotationsToTarget(EntityPlayer target, float baseYaw, float basePitch) {
+    // ── rotation ────────────────────────────────────────────────────────────────
+
+    private float[] getRotationsToTarget(EntityPlayer target) {
         boolean useBackup = ignoreBehindWalls.getValue() || ignoreBehindEntities.getValue();
         Vec3 aimPoint = pickAimPoint(target, useBackup);
         if (aimPoint == null) return null;
 
-        float smoothFactor = 1.0f - (float) speed.getValue() / 30.0f;
+        // Randomization varies the effective speed each tick by up to +-(randomization% * 50%).
+        double jitter = (Math.random() * 2.0 - 1.0) * (randomization.getValue() / 100.0) * 0.5;
+        double effectiveSpeed = MathHelper.clamp_double(speed.getValue() * (1.0 + jitter), 1.0, 30.0);
+        float smoothFactor = 1.0f - (float) (effectiveSpeed / 30.0);
+
         return RotationUtil.getRotations(
                 aimPoint.xCoord - mc.thePlayer.posX,
                 aimPoint.yCoord - (mc.thePlayer.posY + mc.thePlayer.getEyeHeight()),
                 aimPoint.zCoord - mc.thePlayer.posZ,
-                baseYaw, basePitch, 180.0f, smoothFactor);
+                mc.thePlayer.rotationYaw, mc.thePlayer.rotationPitch, 180.0f, smoothFactor);
     }
 
-    /** Picks a point on the target to aim at, honoring the multipoint spread settings. */
+    /** Picks a point on the target, honoring the multipoint spread; falls back to head center. */
     private Vec3 pickAimPoint(EntityPlayer target, boolean useBackup) {
         AxisAlignedBB bb = target.getEntityBoundingBox();
         double mpH = multipointHorizontal.getValue() / 100.0;
@@ -103,32 +110,26 @@ public class AimAssist extends Module {
         double height = bb.maxY - bb.minY;
         double headY  = target.posY + target.getEyeHeight();
 
-        double offsetX = (Math.random() - 0.5) * width  * mpH;
-        double offsetZ = (Math.random() - 0.5) * width  * mpH;
-        double offsetY = (Math.random() - 0.5) * height * mpV;
+        double cx = (bb.minX + bb.maxX) / 2.0;
+        double cz = (bb.minZ + bb.maxZ) / 2.0;
 
-        double tx = (bb.minX + bb.maxX) / 2.0 + offsetX;
-        double tz = (bb.minZ + bb.maxZ) / 2.0 + offsetZ;
-        double ty = MathHelper.clamp_double(headY + offsetY, bb.minY + 0.1, bb.maxY - 0.1);
-
-        Vec3 point = new Vec3(tx, ty, tz);
+        Vec3 point = new Vec3(
+                cx + (Math.random() - 0.5) * width * mpH,
+                MathHelper.clamp_double(headY + (Math.random() - 0.5) * height * mpV, bb.minY + 0.1, bb.maxY - 0.1),
+                cz + (Math.random() - 0.5) * width * mpH);
         if (!useBackup) return point;
-
         if (hasValidAimPoint(target, point)) return point;
 
-        // Fall back to the exact head center if the randomized spot was obstructed.
-        Vec3 fallback = new Vec3((bb.minX + bb.maxX) / 2.0,
-                MathHelper.clamp_double(headY, bb.minY + 0.1, bb.maxY - 0.1),
-                (bb.minZ + bb.maxZ) / 2.0);
+        Vec3 fallback = new Vec3(cx, MathHelper.clamp_double(headY, bb.minY + 0.1, bb.maxY - 0.1), cz);
         return hasValidAimPoint(target, fallback) ? fallback : null;
     }
 
     private boolean hasValidAimPoint(EntityPlayer target, Vec3 point) {
         Vec3 eyes = mc.thePlayer.getPositionEyes(1.0f);
 
-        if (ignoreBehindWalls.getValue()) {
-            MovingObjectPosition blockHit = mc.theWorld.rayTraceBlocks(eyes, point, false, true, false);
-            if (blockHit != null) return false;
+        if (ignoreBehindWalls.getValue()
+                && mc.theWorld.rayTraceBlocks(eyes, point, false, true, false) != null) {
+            return false;
         }
 
         if (ignoreBehindEntities.getValue()) {
@@ -136,14 +137,13 @@ public class AimAssist extends Module {
                 EntityPlayer other = (EntityPlayer) obj;
                 if (other == target || other == mc.thePlayer) continue;
                 AxisAlignedBB expanded = other.getEntityBoundingBox().expand(0.1, 0.1, 0.1);
-                MovingObjectPosition hit = expanded.calculateIntercept(eyes, point);
-                if (hit != null) return false;
+                if (expanded.calculateIntercept(eyes, point) != null) return false;
             }
         }
         return true;
     }
 
-    // ── Targeting ─────────────────────────────────────────────────────────────
+    // ── targeting ───────────────────────────────────────────────────────────────
 
     private EntityPlayer getEnemy() {
         int fovVal = (int) fov.getValue();
@@ -155,16 +155,15 @@ public class AimAssist extends Module {
         }
         if (candidates.isEmpty()) return null;
 
-        Comparator<EntityPlayer> primary = getSortComparator();
-        candidates.sort(primary.thenComparingDouble(p -> mc.thePlayer.getDistanceSqToEntity(p)));
+        candidates.sort(getSortComparator().thenComparingDouble(p -> mc.thePlayer.getDistanceSqToEntity(p)));
 
-        boolean useBackup = ignoreBehindWalls.getValue() || ignoreBehindEntities.getValue();
-        if (!useBackup) return candidates.get(0);
-
-        for (EntityPlayer candidate : candidates) {
-            if (pickAimPoint(candidate, true) != null) return candidate;
+        if (ignoreBehindWalls.getValue() || ignoreBehindEntities.getValue()) {
+            for (EntityPlayer candidate : candidates) {
+                if (pickAimPoint(candidate, true) != null) return candidate;
+            }
+            return null;
         }
-        return null;
+        return candidates.get(0);
     }
 
     private boolean passesTargetFilters(EntityPlayer target, int fovVal) {
@@ -172,10 +171,25 @@ public class AimAssist extends Module {
         if (TeamUtil.isFriend(target)) return false;
         if (ignoreTeammates.getValue() && TeamUtil.isSameTeam(target)) return false;
         if (!aimInvis.getValue() && target.isInvisible()) return false;
-        if (TeamUtil.isBot(target)) return false;
         if (RotationUtil.distanceToBox(target.getEntityBoundingBox()) > range.getValue()) return false;
+        if (TeamUtil.isBot(target)) return false;
+        // angleToEntity is |yaw offset| * 2, so comparing to FOV means +-FOV/2 around the view.
         if (fovVal != 360 && RotationUtil.angleToEntity(target) > fovVal) return false;
         return true;
+    }
+
+    /** |yaw delta| + |pitch delta| from the current view to the target's body center. */
+    private double angleDelta(EntityPlayer p) {
+        Vec3 eyes = mc.thePlayer.getPositionEyes(1.0f);
+        AxisAlignedBB bb = p.getEntityBoundingBox();
+        double dx = (bb.minX + bb.maxX) / 2.0 - eyes.xCoord;
+        double dy = (bb.minY + bb.maxY) / 2.0 - eyes.yCoord;
+        double dz = (bb.minZ + bb.maxZ) / 2.0 - eyes.zCoord;
+        double flat = Math.sqrt(dx * dx + dz * dz);
+        float yaw   = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
+        float pitch = (float) (-Math.atan2(dy, flat) * 180.0 / Math.PI);
+        return Math.abs(MathHelper.wrapAngleTo180_float(yaw - mc.thePlayer.rotationYaw))
+             + Math.abs(MathHelper.wrapAngleTo180_float(pitch - mc.thePlayer.rotationPitch));
     }
 
     private Comparator<EntityPlayer> getSortComparator() {
@@ -183,19 +197,20 @@ public class AimAssist extends Module {
             case 0: return Comparator.comparingDouble(p -> p.getHealth() + p.getAbsorptionAmount());
             case 2: return Comparator.comparingInt(p -> p.hurtTime);
             case 3: return Comparator.comparingDouble(p -> mc.thePlayer.getDistanceSqToEntity(p));
-            default: return Comparator.comparingDouble(RotationUtil::angleToEntity); // Angle
+            default: return Comparator.comparingDouble(this::angleDelta); // Angle
         }
     }
 
+    // ── conditions ──────────────────────────────────────────────────────────────
+
     private boolean conditionsMet() {
-        if (mc.currentScreen != null) return false;
+        if (mc.currentScreen != null || !mc.inGameHasFocus) return false;
         if (weaponOnly.getValue() && !ItemUtil.isHoldingSword()) return false;
         if (clickAim.getValue() && !Mouse.isButtonDown(0)) return false;
 
         if (stopWhenBreaking.getValue() && isBreakingBlock()) {
             if (miningStartTime == -1L) miningStartTime = System.currentTimeMillis();
-            long elapsed = System.currentTimeMillis() - miningStartTime;
-            if (elapsed >= (long) hoverDelay.getValue()) return false;
+            if (System.currentTimeMillis() - miningStartTime >= (long) hoverDelay.getValue()) return false;
         } else {
             miningStartTime = -1L;
         }

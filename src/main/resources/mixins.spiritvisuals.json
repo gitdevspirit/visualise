@@ -22,6 +22,7 @@
     "MixinGuiIngameForge",
     "MixinItemStack",
     "MixinMinecraft",
+    "MixinMovementInputFromOptions",
     "MixinNetworkManager",
     "MixinRendererLivingEntity",
     "MixinVisGraph",
