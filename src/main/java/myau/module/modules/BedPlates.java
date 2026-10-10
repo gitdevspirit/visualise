@@ -279,6 +279,11 @@ public class BedPlates extends Module {
         int scaleFactor = new ScaledResolution(mc).getScaleFactor();
         IAccessorRenderManager rm = (IAccessorRenderManager) mc.getRenderManager();
 
+        // Restore the caller's projection + modelview afterwards: setupOverlayRendering() below leaves the
+        // 2D HUD matrices active, which flattened/hid every 3D tag drawn later in the same frame
+        // (e.g. CoralIntel's BedWarsTag, which only broke once a game with beds started).
+        GlStateManager.matrixMode(5889); GlStateManager.pushMatrix();
+        GlStateManager.matrixMode(5888); GlStateManager.pushMatrix();
         GlStateManager.pushMatrix();
         for (BedData bed : sorted) {
             if (!bed.visible || bed.layers.isEmpty()) continue;
@@ -303,6 +308,8 @@ public class BedPlates extends Module {
             drawPlate(bed, screen[0], screen[1], s);
         }
         GlStateManager.popMatrix();
+        GlStateManager.matrixMode(5889); GlStateManager.popMatrix();
+        GlStateManager.matrixMode(5888); GlStateManager.popMatrix();
 
         GlStateManager.enableDepth();
         GlStateManager.enableCull();

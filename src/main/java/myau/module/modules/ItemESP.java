@@ -202,6 +202,10 @@ public class ItemESP extends Module {
         // The matrices at RenderWorldLast are not reliably the camera's (BedPlates re-applies the camera
         // transform for the same reason). Without this the boxes and labels were drawn in the wrong space,
         // i.e. nowhere on screen even though the items matched.
+        // Keep the caller's projection + modelview: setupOverlayRendering below switches them to the 2D HUD
+        // setup, and anything drawn after us in the same frame (other mods' 3D tags) would be flattened.
+        GlStateManager.matrixMode(5889); GlStateManager.pushMatrix();
+        GlStateManager.matrixMode(5888); GlStateManager.pushMatrix();
         ((IAccessorEntityRenderer) mc.entityRenderer).callSetupCameraTransform(event.getPartialTicks(), 0);
         GlStateManager.pushMatrix();
         GlStateManager.disableLighting();
@@ -275,7 +279,8 @@ public class ItemESP extends Module {
         }
 
         GlStateManager.popMatrix();
-        mc.entityRenderer.setupOverlayRendering();
+        GlStateManager.matrixMode(5889); GlStateManager.popMatrix();
+        GlStateManager.matrixMode(5888); GlStateManager.popMatrix();
 
         // Put everything back through GlStateManager only, so its cache stays in sync.
         GlStateManager.enableDepth();
