@@ -3,6 +3,7 @@ package myau.module.modules;
 import myau.enums.ChatColors;
 import myau.event.EventTarget;
 import myau.events.Render3DEvent;
+import myau.mixin.IAccessorEntityRenderer;
 import myau.mixin.IAccessorRenderManager;
 import myau.module.BooleanSetting;
 import myau.module.SliderSetting;
@@ -198,6 +199,10 @@ public class ItemESP extends Module {
         // leaves lighting / blend / alpha out of sync for everything drawn after this (flat or gray
         // nametags, dark items). Remember what we change and put it back through GlStateManager.
         boolean lightingWas = GL11.glIsEnabled(GL11.GL_LIGHTING);
+        // The matrices at RenderWorldLast are not reliably the camera's (BedPlates re-applies the camera
+        // transform for the same reason). Without this the boxes and labels were drawn in the wrong space,
+        // i.e. nowhere on screen even though the items matched.
+        ((IAccessorEntityRenderer) mc.entityRenderer).callSetupCameraTransform(event.getPartialTicks(), 0);
         GlStateManager.pushMatrix();
         GlStateManager.disableLighting();
 
@@ -270,6 +275,7 @@ public class ItemESP extends Module {
         }
 
         GlStateManager.popMatrix();
+        mc.entityRenderer.setupOverlayRendering();
 
         // Put everything back through GlStateManager only, so its cache stays in sync.
         GlStateManager.enableDepth();
