@@ -11,6 +11,9 @@ import myau.util.RenderUtil;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.WorldRenderer;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.init.Blocks;
@@ -168,7 +171,6 @@ public class ItemESP extends Module {
             .collect(Collectors.toList());
 
         GlStateManager.pushMatrix();
-        GlStateManager.pushAttrib();
         GlStateManager.disableLighting();
 
         for (Map.Entry<ItemData, Integer> entry : entries) {
@@ -210,46 +212,58 @@ public class ItemESP extends Module {
             double fs = -(0.025 + 0.02 * ((Math.max(6.0, dist) - 6.0) / 28.0));
             GlStateManager.scale(fs, fs, 1.0);
 
-            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            // Label state. Culling must be OFF: RenderUtil.disableRenderState() (used by the
+            // outline) turns it back on, which made the flat background quad back-facing/culled.
+            GlStateManager.disableLighting();
+            GlStateManager.disableDepth();
+            GlStateManager.disableCull();
             GlStateManager.enableBlend();
+            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
             float tw = mc.fontRendererObj.getStringWidth(label) / 2f;
             float th = mc.fontRendererObj.FONT_HEIGHT / 2f;
 
             // Dark background pill
-            int bgAlpha = (int)(bgOpacity.getValue() / 100.0 * 255.0);
-            int bgColor = (bgAlpha << 24) | 0x000000;
+            int bgAlpha = (int) (bgOpacity.getValue() / 100.0 * 255.0);
             float pad = 2f;
-            drawFlatRect(-tw - pad, -th - pad, tw + pad, th + pad, bgColor);
+            drawFlatRect(-tw - pad, -th - pad, tw + pad, th + pad, bgAlpha << 24);
 
             // Colored text with shadow
             int textColor = (255 << 24) | (cr << 16) | (cg << 8) | cb;
+            GlStateManager.enableTexture2D();
+            GlStateManager.enableAlpha();
             mc.fontRendererObj.drawStringWithShadow(label, -tw, -th, textColor);
 
-            GlStateManager.disableBlend();
-            GL11.glEnable(GL11.GL_DEPTH_TEST);
             GlStateManager.popMatrix();
         }
 
-        GlStateManager.enableLighting();
-        GlStateManager.popAttrib();
         GlStateManager.popMatrix();
+
+        // Restore state through GlStateManager only so its cache stays in sync.
+        GlStateManager.enableDepth();
+        GlStateManager.enableCull();
+        GlStateManager.disableBlend();
+        GlStateManager.enableLighting();
+        GlStateManager.color(1f, 1f, 1f, 1f);
     }
 
-    /** Draws a flat (non-3D) rect in the current GL matrix space */
+    /** Draws a flat (non-3D) rect in the current GL matrix space. */
     private void drawFlatRect(float x1, float y1, float x2, float y2, int color) {
-        float a = ((color >> 24) & 0xFF) / 255f;
-        float r = ((color >> 16) & 0xFF) / 255f;
-        float g = ((color >>  8) & 0xFF) / 255f;
-        float b = ( color        & 0xFF) / 255f;
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glColor4f(r, g, b, a);
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glVertex2f(x1, y2); GL11.glVertex2f(x2, y2);
-        GL11.glVertex2f(x2, y1); GL11.glVertex2f(x1, y1);
-        GL11.glEnd();
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glColor4f(1, 1, 1, 1);
+        int a = (color >> 24) & 0xFF;
+        int r = (color >> 16) & 0xFF;
+        int g = (color >>  8) & 0xFF;
+        int b =  color        & 0xFF;
+
+        GlStateManager.disableTexture2D();
+        Tessellator tessellator = Tessellator.getInstance();
+        WorldRenderer wr = tessellator.getWorldRenderer();
+        wr.begin(7, DefaultVertexFormats.POSITION_COLOR);
+        wr.pos(x1, y2, 0).color(r, g, b, a).endVertex();
+        wr.pos(x2, y2, 0).color(r, g, b, a).endVertex();
+        wr.pos(x2, y1, 0).color(r, g, b, a).endVertex();
+        wr.pos(x1, y1, 0).color(r, g, b, a).endVertex();
+        tessellator.draw();
+        GlStateManager.enableTexture2D();
     }
 
     // ── ItemData ──────────────────────────────────────────────────────────────
