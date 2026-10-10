@@ -79,7 +79,10 @@ public abstract class Module {
                Notifications notifModule = (Notifications) Myau.moduleManager.modules.get(Notifications.class);
                if (notifModule != null && notifModule.isEnabled()) {
                   long dur = (long)(notifModule.duration.getValue() * 1000.0);
-                  Myau.notificationManager.addToggle(this.getName(), this.enabled, dur, this.enabled ? 0xE991B8 : 0x666666);
+                  Myau.notificationManager.addToggle(this.getName(), this.enabled, dur,
+                        this.enabled ? 0xE991B8 : 0x666666,
+                        notifModule.toasts.getValue(),
+                        notifModule.chatToggle.getValue() ? notifModule.chatStyle.getIndex() : -1);
                }
             }
          } catch (Exception var4) {

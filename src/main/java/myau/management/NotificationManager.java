@@ -1,5 +1,7 @@
 package myau.management;
 
+import myau.util.ChatUtil;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -11,15 +13,25 @@ public class NotificationManager {
         public final long startMillis;
         public final long durationMillis;
         public final int color; // RGB
+        /** Set for module-toggle notifications, null for plain messages. */
+        public final String moduleName;
+        /** TRUE = toggled on, FALSE = toggled off, null = not a toggle notification. */
+        public final Boolean state;
 
         public NotificationEntry(String message, long durationMillis) {
             this(message, durationMillis, 0xFFFFFF);
         }
 
         public NotificationEntry(String message, long durationMillis, int color) {
+            this(message, durationMillis, color, null, null);
+        }
+
+        public NotificationEntry(String message, long durationMillis, int color, String moduleName, Boolean state) {
             this.message = message;
             this.durationMillis = durationMillis;
             this.color = color;
+            this.moduleName = moduleName;
+            this.state = state;
             this.startMillis = System.currentTimeMillis();
         }
 
@@ -48,18 +60,31 @@ public class NotificationManager {
         final boolean enabled;
         final long durationMillis;
         final int color;
+        final boolean toast;
+        final int chatStyle; // -1 = no chat line
 
-        PendingToggle(String name, boolean enabled, long durationMillis, int color) {
+        PendingToggle(String name, boolean enabled, long durationMillis, int color, boolean toast, int chatStyle) {
             this.name = name;
             this.enabled = enabled;
             this.durationMillis = durationMillis;
             this.color = color;
+            this.toast = toast;
+            this.chatStyle = chatStyle;
         }
     }
 
     /** Use this (instead of add()) for module enable/disable notifications so rapid bursts get batched. */
     public synchronized void addToggle(String moduleName, boolean enabled, long durationMillis, int color) {
-        pendingToggles.add(new PendingToggle(moduleName, enabled, durationMillis, color));
+        addToggle(moduleName, enabled, durationMillis, color, true, -1);
+    }
+
+    /**
+     * @param toast     show an on-screen notification
+     * @param chatStyle -1 for no chat line, otherwise the ChatUtil.sendToggle style (0 or 1)
+     */
+    public synchronized void addToggle(String moduleName, boolean enabled, long durationMillis, int color,
+                                       boolean toast, int chatStyle) {
+        pendingToggles.add(new PendingToggle(moduleName, enabled, durationMillis, color, toast, chatStyle));
 
         if (batchStartMillis < 0) {
             batchStartMillis = System.currentTimeMillis();
@@ -81,23 +106,37 @@ public class NotificationManager {
             (t.enabled ? enabledList : disabledList).add(t);
         }
 
-        if (enabledList.size() >= BATCH_THRESHOLD) {
-            PendingToggle sample = enabledList.get(0);
-            entries.add(new NotificationEntry(
-                    enabledList.size() + " modules toggled", sample.durationMillis, sample.color));
+        emit(enabledList, true);
+        emit(disabledList, false);
+    }
+
+    /** Turns one batch of same-direction toggles into toasts and/or chat lines (3+ are collapsed). */
+    private void emit(List<PendingToggle> list, boolean enabled) {
+        if (list.isEmpty()) return;
+        String word = enabled ? " toggled" : " untoggled";
+
+        List<PendingToggle> toasts = new ArrayList<>();
+        List<PendingToggle> chats = new ArrayList<>();
+        for (PendingToggle t : list) {
+            if (t.toast) toasts.add(t);
+            if (t.chatStyle >= 0) chats.add(t);
+        }
+
+        if (toasts.size() >= BATCH_THRESHOLD) {
+            PendingToggle sample = toasts.get(0);
+            String group = toasts.size() + " modules";
+            entries.add(new NotificationEntry(group + word, sample.durationMillis, sample.color, group, enabled));
         } else {
-            for (PendingToggle t : enabledList) {
-                entries.add(new NotificationEntry(t.name + " toggled", t.durationMillis, t.color));
+            for (PendingToggle t : toasts) {
+                entries.add(new NotificationEntry(t.name + word, t.durationMillis, t.color, t.name, enabled));
             }
         }
 
-        if (disabledList.size() >= BATCH_THRESHOLD) {
-            PendingToggle sample = disabledList.get(0);
-            entries.add(new NotificationEntry(
-                    disabledList.size() + " modules untoggled", sample.durationMillis, sample.color));
+        if (chats.size() >= BATCH_THRESHOLD) {
+            ChatUtil.sendToggle(chats.size() + " modules", enabled, chats.get(0).chatStyle);
         } else {
-            for (PendingToggle t : disabledList) {
-                entries.add(new NotificationEntry(t.name + " untoggled", t.durationMillis, t.color));
+            for (PendingToggle t : chats) {
+                ChatUtil.sendToggle(t.name, enabled, t.chatStyle);
             }
         }
     }

@@ -10,6 +10,7 @@ import myau.module.BooleanSetting;
 import myau.module.DropdownSetting;
 import myau.module.Module;
 import myau.module.SliderSetting;
+import myau.ui.clickgui.GuiRender;
 import myau.ui.clickgui.RoundedUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
@@ -33,6 +34,14 @@ public class Notifications extends Module {
     public final DropdownSetting position = register(new DropdownSetting("Position", 0,
             "Bottom Right", "Top Right", "Bottom Left", "Top Left"));
     public final BooleanSetting  anim     = register(new BooleanSetting("Animation", true));
+
+    // What to show, and how
+    public final DropdownSetting style = register(new DropdownSetting("Style", 1,
+            "Classic", "Modern", "Pill", "Minimal"));
+    public final BooleanSetting  toasts     = register(new BooleanSetting("Toast Notifications", true));
+    public final BooleanSetting  chatToggle = register(new BooleanSetting("Chat Notifications", true));
+    public final DropdownSetting chatStyle  = register(new DropdownSetting("Chat Style", 0,
+            () -> chatToggle.getValue(), "TOGGLED [Module]", "{TOGGLED} [Module]"));
 
     // Color mode (ported from the reference client)
     public final DropdownSetting colorMode = register(new DropdownSetting("Color Mode", 0,
@@ -73,6 +82,9 @@ public class Notifications extends Module {
     private static final int BG      = 0xEE0D0D0D;
     private static final int WHITE   = 0xFFEEEEFF;
     private static final int DIM     = 0xFF888899;
+    private static final int OFF_RED = 0xFFEF5B5B;   // "disabled" accent for the new styles
+
+    private int guiScale = 2;
 
     public Notifications() { super("Notifications", true); }
 
@@ -80,103 +92,350 @@ public class Notifications extends Module {
     public void onRender2D(Render2DEvent event) {
         if (mc.thePlayer == null || Myau.notificationManager == null) return;
         List<NotificationManager.NotificationEntry> active = Myau.notificationManager.getActive();
-        if (active.isEmpty()) return;
+        if (active.isEmpty() || !toasts.getValue()) return;
 
-        ScaledResolution sr  = new ScaledResolution(mc);
-        int sw = sr.getScaledWidth(), sh = sr.getScaledHeight();
-        int pos         = position.getIndex();
-        boolean right   = pos == 0 || pos == 1;
-        boolean bottom  = pos == 0 || pos == 2;
+        ScaledResolution sr = new ScaledResolution(mc);
+        guiScale = sr.getScaleFactor();
+        int pos        = position.getIndex();
+        boolean right  = pos == 0 || pos == 1;
+        boolean bottom = pos == 0 || pos == 2;
+        int mode       = style.getIndex();
 
+        float stack = 0f;
         for (int i = 0; i < active.size(); i++) {
             NotificationManager.NotificationEntry n = active.get(i);
-
             long  age   = n.getAge();
             long  total = n.durationMillis;
             float alpha = computeAlpha(age, total);
             float slide = computeSlide(age, total);
 
-            String moduleName = n.message;
-            String stateText = "";
-
-            if (splitState.getValue()) {
-                if (n.message.endsWith(" toggled")) {
-                    moduleName = n.message.substring(0, n.message.length() - " toggled".length());
-                    stateText = "toggled";
-                } else if (n.message.endsWith(" untoggled")) {
-                    moduleName = n.message.substring(0, n.message.length() - " untoggled".length());
-                    stateText = "untoggled";
-                }
+            float used;
+            switch (mode) {
+                case 1:  used = drawModern(n, i, sr, right, bottom, stack, alpha, slide, age, total);  break;
+                case 2:  used = drawPill(n, i, sr, right, bottom, stack, alpha, slide);                break;
+                case 3:  used = drawMinimal(n, i, sr, right, bottom, stack, alpha, slide, age, total); break;
+                default: used = drawClassic(n, i, sr, right, bottom, stack, alpha, slide, age, total); break;
             }
-
-            if (lowercase.getValue()) {
-                moduleName = moduleName.toLowerCase();
-                stateText = stateText.toLowerCase();
-            }
-
-            int nameW  = fontWidth(moduleName);
-            int stateW = stateText.isEmpty() ? 0 : fontWidth(stateText);
-            int stateGap = stateText.isEmpty() ? 0 : 4;
-            int msgW = nameW + stateGap + stateW;
-
-            int cardW  = ACCENT_W + PAD_LEFT + msgW + PAD_RIGHT;
-            int minW   = 120;
-            if (cardW < minW) cardW = minW;
-
-            float slideOff = anim.getValue() ? (cardW + MARGIN + 20) * (1f - slide) : 0f;
-            float x = right  ? sw - MARGIN - cardW + slideOff : MARGIN - slideOff;
-            float y = bottom ? sh - MARGIN - H - i * (H + GAP)
-                             : MARGIN + i * (H + GAP);
-
-            int accentRaw = n.color != 0xFFFFFF
-                    ? (0xFF000000 | n.color)
-                    : resolveColor(i * 40f);
-            int accent    = withAlpha(accentRaw, alpha);
-            int bg        = withAlpha(BG, alpha);
-            int stateCol  = withAlpha(DIM, alpha);
-
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(x, y, 0);
-
-            solidRect(-2, -2, cardW + 4, H + 4, withAlpha(0xFF000000, alpha * 0.3f));
-            RoundedUtils.drawRoundedRect(0, 0, cardW, H, CORNER_R, bg);
-            RoundedUtils.drawRoundedRect(0, 0, ACCENT_W + CORNER_R, H, CORNER_R, accent);
-            solidRect(ACCENT_W, 0, CORNER_R, H, bg);
-
-            float progress = total > 0 ? Math.max(0f, 1f - (float) age / total) : 1f;
-            int barW = (int)((cardW - ACCENT_W) * progress);
-            if (barW > 0) {
-                solidRect(ACCENT_W, H - 2, barW, 2, withAlpha(accent, alpha * 0.5f));
-            }
-
-            solidRect(ACCENT_W, 0, cardW - ACCENT_W, 1, withAlpha(0xFFFFFFFF, alpha * 0.06f));
-
-            GlStateManager.enableTexture2D();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GlStateManager.disableDepth();
-
-            int fontH = fontLineHeight();
-            int ty    = (H - fontH) / 2;
-
-            drawFontString(
-                    moduleName, ACCENT_W + PAD_LEFT, ty,
-                    withAlpha(WHITE, alpha), textShadow.getValue()
-            );
-
-            if (!stateText.isEmpty()) {
-                drawFontString(
-                        stateText, ACCENT_W + PAD_LEFT + nameW + stateGap, ty,
-                        stateCol, textShadow.getValue()
-                );
-            }
-
-            GlStateManager.enableDepth();
-            GlStateManager.disableBlend();
-            GL11.glColor4f(1, 1, 1, 1);
-
-            GlStateManager.popMatrix();
+            stack += used + GAP;
         }
+    }
+
+    // ── Shared helpers for the new styles ───────────────────────────────────────
+
+    private String titleOf(NotificationManager.NotificationEntry n) {
+        String t = n.moduleName != null ? n.moduleName : n.message;
+        return lowercase.getValue() ? t.toLowerCase() : t;
+    }
+
+    /** Accent for the new styles: theme color when on / plain, red when a module was turned off. */
+    private int accentFor(NotificationManager.NotificationEntry n, int index) {
+        if (n.state != null && !n.state) return OFF_RED;
+        return resolveColor(index * 40f);
+    }
+
+    private float slideX(float cardW, boolean right, int sw, float slide) {
+        float off = anim.getValue() ? (cardW + MARGIN + 20) * (1f - slide) : 0f;
+        return right ? sw - MARGIN - cardW + off : MARGIN - off;
+    }
+
+    private float placeY(float h, boolean bottom, int sh, float stack) {
+        return bottom ? sh - MARGIN - h - stack : MARGIN + stack;
+    }
+
+    private void beginText() {
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager.disableDepth();
+    }
+
+    private void endDraw() {
+        GlStateManager.enableDepth();
+        GlStateManager.disableBlend();
+        GlStateManager.color(1f, 1f, 1f, 1f);
+    }
+
+    /** Check mark (on), cross (off) or a dot (plain message) centered at cx, cy. */
+    private void drawIcon(Boolean on, float cx, float cy, int argb) {
+        if (on == null) {
+            GuiRender.fillCircle(cx, cy, 2.5f, argb);
+            return;
+        }
+        float a = (argb >> 24 & 0xFF) / 255f;
+        float r = (argb >> 16 & 0xFF) / 255f;
+        float g = (argb >> 8  & 0xFF) / 255f;
+        float b = (argb       & 0xFF) / 255f;
+
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager.color(r, g, b, a);
+        GL11.glLineWidth(1.7f * guiScale / 2f + 0.3f);
+        GL11.glEnable(GL11.GL_LINE_SMOOTH);
+        if (on) {
+            GL11.glBegin(GL11.GL_LINE_STRIP);
+            GL11.glVertex2f(cx - 3.6f, cy + 0.2f);
+            GL11.glVertex2f(cx - 1.0f, cy + 2.9f);
+            GL11.glVertex2f(cx + 3.8f, cy - 2.7f);
+            GL11.glEnd();
+        } else {
+            GL11.glBegin(GL11.GL_LINES);
+            GL11.glVertex2f(cx - 3.0f, cy - 3.0f);
+            GL11.glVertex2f(cx + 3.0f, cy + 3.0f);
+            GL11.glVertex2f(cx + 3.0f, cy - 3.0f);
+            GL11.glVertex2f(cx - 3.0f, cy + 3.0f);
+            GL11.glEnd();
+        }
+        GL11.glDisable(GL11.GL_LINE_SMOOTH);
+        GL11.glLineWidth(1f);
+        GlStateManager.enableTexture2D();
+        GlStateManager.color(1f, 1f, 1f, 1f);
+    }
+
+    // ── Style: Modern ───────────────────────────────────────────────────────────
+    // Two-line card: status icon in a tinted circle, module name over "Enabled/Disabled",
+    // an ON/OFF badge on the right and a thin timer bar along the bottom.
+
+    private float drawModern(NotificationManager.NotificationEntry n, int index, ScaledResolution sr,
+                             boolean right, boolean bottom, float stack, float alpha, float slide,
+                             long age, long total) {
+        final float h = 34f;
+        final float iconArea = 36f;
+
+        String title = titleOf(n);
+        String sub   = n.state == null ? "" : (n.state ? "Enabled" : "Disabled");
+        String badge = n.state == null ? "" : (n.state ? "ON" : "OFF");
+        int accent   = accentFor(n, index);
+
+        int   fh     = fontLineHeight();
+        float textW  = Math.max(fontWidth(title), fontWidth(sub));
+        float badgeW = badge.isEmpty() ? 0f : fontWidth(badge) + 12f;
+        float cardW  = Math.max(150f, iconArea + textW + (badge.isEmpty() ? 0f : badgeW + 10f) + 12f);
+
+        float x = slideX(cardW, right, sr.getScaledWidth(), slide);
+        float y = placeY(h, bottom, sr.getScaledHeight(), stack);
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, 0);
+
+        solidRect(-1, -1, cardW + 2, h + 2, withAlpha(0xFF000000, alpha * 0.22f));
+        RoundedUtils.drawRoundedRect(0, 0, cardW, h, 6f, withAlpha(0xF0111116, alpha));
+        RoundedUtils.drawRoundedOutline(0, 0, cardW, h, 6f, 1f, withAlpha(accent, alpha * 0.35f));
+
+        float cy = h / 2f;
+        GuiRender.fillCircle(19f, cy, 10.5f, withAlpha(accent, alpha * 0.20f));
+        drawIcon(n.state, 19f, cy, withAlpha(accent, alpha));
+
+        beginText();
+        int block = sub.isEmpty() ? fh : fh * 2 + 2;
+        float ty  = (h - block) / 2f;
+        drawFontString(title, iconArea, ty, withAlpha(WHITE, alpha), textShadow.getValue());
+        if (!sub.isEmpty()) {
+            drawFontString(sub, iconArea, ty + fh + 2, withAlpha(DIM, alpha), false);
+        }
+
+        if (!badge.isEmpty()) {
+            float bx = cardW - 10f - badgeW, by = (h - 14f) / 2f;
+            RoundedUtils.drawRoundedRect(bx, by, badgeW, 14f, 7f, withAlpha(accent, alpha * 0.22f));
+            beginText();
+            drawFontString(badge, bx + 6f, by + (14f - fh) / 2f, withAlpha(accent, alpha), false);
+        }
+
+        float progress = total > 0 ? Math.max(0f, 1f - (float) age / total) : 1f;
+        float barW = (cardW - 16f) * progress;
+        if (barW > 0f) {
+            solidRect(8f, h - 4f, barW, 1.5f, withAlpha(accent, alpha * 0.65f));
+        }
+
+        endDraw();
+        GlStateManager.popMatrix();
+        return h;
+    }
+
+    // ── Style: Pill ─────────────────────────────────────────────────────────────
+    // Compact capsule: glowing status dot, module name, then ON / OFF in the accent color.
+
+    private float drawPill(NotificationManager.NotificationEntry n, int index, ScaledResolution sr,
+                           boolean right, boolean bottom, float stack, float alpha, float slide) {
+        final float h = 20f;
+        final float dotArea = 20f;
+
+        String title = titleOf(n);
+        String state = n.state == null ? "" : (n.state ? "ON" : "OFF");
+        if (lowercase.getValue()) state = state.toLowerCase();
+        int accent = accentFor(n, index);
+
+        int   fh    = fontLineHeight();
+        int   nameW = fontWidth(title);
+        int   stW   = state.isEmpty() ? 0 : fontWidth(state);
+        float cardW = dotArea + nameW + (stW > 0 ? 6f + stW : 0f) + 11f;
+
+        float x = slideX(cardW, right, sr.getScaledWidth(), slide);
+        float y = placeY(h, bottom, sr.getScaledHeight(), stack);
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, 0);
+
+        RoundedUtils.drawRoundedRect(-1, -1, cardW + 2, h + 2, h / 2f + 1f, withAlpha(0xFF000000, alpha * 0.25f));
+        RoundedUtils.drawRoundedRect(0, 0, cardW, h, h / 2f, withAlpha(0xF2121217, alpha));
+        RoundedUtils.drawRoundedOutline(0, 0, cardW, h, h / 2f, 1f, withAlpha(accent, alpha * 0.30f));
+
+        float cy = h / 2f;
+        GuiRender.fillCircle(11f, cy, 5.5f, withAlpha(accent, alpha * 0.20f));
+        GuiRender.fillCircle(11f, cy, 3f,   withAlpha(accent, alpha));
+
+        beginText();
+        float ty = (h - fh) / 2f;
+        drawFontString(title, dotArea, ty, withAlpha(WHITE, alpha), textShadow.getValue());
+        if (stW > 0) {
+            drawFontString(state, dotArea + nameW + 6f, ty, withAlpha(accent, alpha), false);
+        }
+
+        endDraw();
+        GlStateManager.popMatrix();
+        return h;
+    }
+
+    // ── Style: Minimal ──────────────────────────────────────────────────────────
+    // No card: a soft fade strip behind the text, an accent edge facing the screen border
+    // and a hairline timer.
+
+    private float drawMinimal(NotificationManager.NotificationEntry n, int index, ScaledResolution sr,
+                              boolean right, boolean bottom, float stack, float alpha, float slide,
+                              long age, long total) {
+        final float h = 16f;
+
+        String title = titleOf(n);
+        String state = n.state == null ? "" : (n.state ? "on" : "off");
+        int accent = accentFor(n, index);
+
+        int   fh    = fontLineHeight();
+        int   nameW = fontWidth(title);
+        int   stW   = state.isEmpty() ? 0 : fontWidth(state);
+        float cardW = 10f + nameW + (stW > 0 ? 5f + stW : 0f) + 12f;
+
+        float x = slideX(cardW, right, sr.getScaledWidth(), slide);
+        float y = placeY(h, bottom, sr.getScaledHeight(), stack);
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, 0);
+
+        int solid = withAlpha(0xFF0B0B0F, alpha * 0.85f);
+        int clear = withAlpha(0xFF0B0B0F, 0f);
+        if (right) {
+            GuiRender.rectGradientH(0, 0, cardW, h, clear, solid);
+            solidRect(cardW - 2f, 0, 2f, h, withAlpha(accent, alpha));
+        } else {
+            GuiRender.rectGradientH(0, 0, cardW, h, solid, clear);
+            solidRect(0, 0, 2f, h, withAlpha(accent, alpha));
+        }
+
+        float progress = total > 0 ? Math.max(0f, 1f - (float) age / total) : 1f;
+        float lineW = cardW * progress;
+        if (lineW > 0f) {
+            solidRect(right ? cardW - lineW : 0f, h - 1f, lineW, 1f, withAlpha(accent, alpha * 0.55f));
+        }
+
+        beginText();
+        float tx = 10f;
+        float ty = (h - fh) / 2f;
+        drawFontString(title, tx, ty, withAlpha(WHITE, alpha), textShadow.getValue());
+        if (stW > 0) {
+            drawFontString(state, tx + nameW + 5f, ty, withAlpha(accent, alpha), false);
+        }
+
+        endDraw();
+        GlStateManager.popMatrix();
+        return h;
+    }
+
+    // ── Style: Classic (the original look, unchanged) ───────────────────────────
+
+    private float drawClassic(NotificationManager.NotificationEntry n, int i, ScaledResolution sr,
+                              boolean right, boolean bottom, float stack, float alpha, float slide,
+                              long age, long total) {
+        int sw = sr.getScaledWidth(), sh = sr.getScaledHeight();
+
+        String moduleName = n.message;
+        String stateText = "";
+
+        if (splitState.getValue()) {
+            if (n.message.endsWith(" toggled")) {
+                moduleName = n.message.substring(0, n.message.length() - " toggled".length());
+                stateText = "toggled";
+            } else if (n.message.endsWith(" untoggled")) {
+                moduleName = n.message.substring(0, n.message.length() - " untoggled".length());
+                stateText = "untoggled";
+            }
+        }
+
+        if (lowercase.getValue()) {
+            moduleName = moduleName.toLowerCase();
+            stateText = stateText.toLowerCase();
+        }
+
+        int nameW  = fontWidth(moduleName);
+        int stateW = stateText.isEmpty() ? 0 : fontWidth(stateText);
+        int stateGap = stateText.isEmpty() ? 0 : 4;
+        int msgW = nameW + stateGap + stateW;
+
+        int cardW  = ACCENT_W + PAD_LEFT + msgW + PAD_RIGHT;
+        int minW   = 120;
+        if (cardW < minW) cardW = minW;
+
+        float slideOff = anim.getValue() ? (cardW + MARGIN + 20) * (1f - slide) : 0f;
+        float x = right  ? sw - MARGIN - cardW + slideOff : MARGIN - slideOff;
+        float y = bottom ? sh - MARGIN - H - stack : MARGIN + stack;
+
+        int accentRaw = n.color != 0xFFFFFF
+                ? (0xFF000000 | n.color)
+                : resolveColor(i * 40f);
+        int accent    = withAlpha(accentRaw, alpha);
+        int bg        = withAlpha(BG, alpha);
+        int stateCol  = withAlpha(DIM, alpha);
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, 0);
+
+        solidRect(-2, -2, cardW + 4, H + 4, withAlpha(0xFF000000, alpha * 0.3f));
+        RoundedUtils.drawRoundedRect(0, 0, cardW, H, CORNER_R, bg);
+        RoundedUtils.drawRoundedRect(0, 0, ACCENT_W + CORNER_R, H, CORNER_R, accent);
+        solidRect(ACCENT_W, 0, CORNER_R, H, bg);
+
+        float progress = total > 0 ? Math.max(0f, 1f - (float) age / total) : 1f;
+        int barW = (int)((cardW - ACCENT_W) * progress);
+        if (barW > 0) {
+            solidRect(ACCENT_W, H - 2, barW, 2, withAlpha(accent, alpha * 0.5f));
+        }
+
+        solidRect(ACCENT_W, 0, cardW - ACCENT_W, 1, withAlpha(0xFFFFFFFF, alpha * 0.06f));
+
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager.disableDepth();
+
+        int fontH = fontLineHeight();
+        int ty    = (H - fontH) / 2;
+
+        drawFontString(
+                moduleName, ACCENT_W + PAD_LEFT, ty,
+                withAlpha(WHITE, alpha), textShadow.getValue()
+        );
+
+        if (!stateText.isEmpty()) {
+            drawFontString(
+                    stateText, ACCENT_W + PAD_LEFT + nameW + stateGap, ty,
+                    stateCol, textShadow.getValue()
+            );
+        }
+
+        GlStateManager.enableDepth();
+        GlStateManager.disableBlend();
+        GL11.glColor4f(1, 1, 1, 1);
+
+        GlStateManager.popMatrix();
+        return H;
     }
 
     private int resolveColor(float waveOffset) {
