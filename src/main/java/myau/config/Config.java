@@ -44,14 +44,14 @@ public class Config {
     public void load() {
         try {
             if (!file.exists()) {
-                ConfigManager.notify("Config not found: " + this.name + " (creating it)", false);
+                ConfigManager.notify("NOT FOUND", this.name, false);
                 save();
                 return;
             }
 
             JsonElement parsed = new JsonParser().parse(new BufferedReader(new FileReader(file)));
             if (parsed == null || !parsed.isJsonObject()) {
-                ConfigManager.notify("Invalid config: " + this.name, false);
+                ConfigManager.notify("INVALID", this.name, false);
                 return;
             }
 
@@ -129,15 +129,15 @@ public class Config {
             
             
             
-            ConfigManager.notify("Config loaded: " + this.name, true);
+            ConfigManager.notify("LOADED", this.name, true);
         } catch (FileNotFoundException e) {
-            ConfigManager.notify("Config not found: " + this.name, false);
+            ConfigManager.notify("NOT FOUND", this.name, false);
         } catch (JsonSyntaxException e) {
-            ConfigManager.notify("Config has invalid JSON: " + this.name, false);
+            ConfigManager.notify("INVALID JSON", this.name, false);
             ((IAccessorMinecraft) mc).getLogger().error("JSON Syntax Error: " + e.getMessage());
         } catch (Exception e) {
             ((IAccessorMinecraft) mc).getLogger().error("Error loading config: " + e.getMessage());
-            ConfigManager.notify("Config couldn't be loaded: " + this.name, false);
+            ConfigManager.notify("LOAD FAILED", this.name, false);
         }
     }
 
@@ -203,10 +203,10 @@ public class Config {
             PrintWriter printWriter = new PrintWriter(new FileWriter(file));
             printWriter.println(gson.toJson(object));
             printWriter.close();
-            ConfigManager.notify("Config saved: " + this.name, true);
+            ConfigManager.notify("SAVED", this.name, true);
         } catch (IOException e) {
             ((IAccessorMinecraft) mc).getLogger().error("Error saving config: " + e.getMessage());
-            ConfigManager.notify("Config couldn't be saved: " + this.name, false);
+            ConfigManager.notify("SAVE FAILED", this.name, false);
         }
     }
 }

@@ -280,21 +280,21 @@ public class ConfigManager {
     }
 
     /**
-     * Result of a save / load: shown as a notification toast when the Notifications module is on
-     * (green for success, red for a problem), otherwise as a plain chat line.
+     * Result of a save / load. Always a chat line (like the TOGGLED ones, no client-name prefix), plus a
+     * notification toast when the Notifications module is on.
      */
-    public static void notify(String text, boolean ok) {
+    public static void notify(String action, String name, boolean ok) {
         // Startup / shutdown loads and saves happen with no world: stay quiet.
         if (net.minecraft.client.Minecraft.getMinecraft().thePlayer == null) return;
+        String color = ok ? "&a&l" : "&c&l";
+        ChatUtil.sendFormatted(color + action + " &r&7[&f" + name + "&7]&r");
         try {
             myau.module.modules.Notifications n =
                     (myau.module.modules.Notifications) Myau.moduleManager.getModule(myau.module.modules.Notifications.class);
             if (n != null && n.isEnabled() && n.toasts.getValue() && Myau.notificationManager != null) {
-                Myau.notificationManager.add(text, (long) (n.duration.getValue() * 1000.0), ok ? 0x55FF55 : 0xFF5555);
-                return;
+                Myau.notificationManager.add(action + " [" + name + "]", (long) (n.duration.getValue() * 1000.0), ok ? 0x55FF55 : 0xFF5555);
             }
         } catch (Exception ignored) {
         }
-        ChatUtil.sendFormatted("&7[&fConfig&7]&r " + (ok ? "&a" : "&c") + text + "&r");
     }
 }
