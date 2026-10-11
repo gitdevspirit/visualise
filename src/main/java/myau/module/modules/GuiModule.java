@@ -30,7 +30,9 @@ public class GuiModule extends Module {
                     Arrays.asList("Combat", "Render", "HUD", "Movement"),
                     Arrays.asList(ModuleRegistry.combatModules, ModuleRegistry.renderModules, ModuleRegistry.hudModules, ModuleRegistry.movementModules)
             );
+            gui.addDynamicPanel("Configs", myau.config.ConfigManager::modules);
         }
+        myau.config.ConfigManager.version++; // pick up configs saved/deleted outside the GUI
 
         mc.displayGuiScreen(gui);
     }

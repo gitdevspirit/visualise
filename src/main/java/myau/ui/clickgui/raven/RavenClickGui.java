@@ -42,6 +42,13 @@ public class RavenClickGui extends GuiScreen {
         }
     }
 
+    /** Adds a window whose buttons come from a live list (used for the saved configs). */
+    public void addDynamicPanel(String name, java.util.function.Supplier<List<Module>> source) {
+        CategoryPanel p = new CategoryPanel(name, new ArrayList<Module>(), 24f, 24f, panels.size());
+        p.setDynamic(source);
+        panels.add(p);
+    }
+
     @Override
     public void initGui() {
         super.initGui();
@@ -55,6 +62,7 @@ public class RavenClickGui extends GuiScreen {
     @Override
     public void onGuiClosed() {
         Keyboard.enableRepeatEvents(false);
+        myau.config.ConfigManager.saveBinds();
         for (CategoryPanel p : panels) {
             p.stopCapturing();
             p.mouseReleased();

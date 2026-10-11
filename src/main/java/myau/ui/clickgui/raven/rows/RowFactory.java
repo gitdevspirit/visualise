@@ -43,7 +43,9 @@ public final class RowFactory {
         }
 
         rows.add(new BindRow("Bind", module::getKey, module::setKey, null));
-        rows.add(new BoolRow("Hide in list", module::isHidden, module::setHidden, null));
+        if (!(module instanceof myau.config.ConfigModule)) {
+            rows.add(new BoolRow("Hide in list", module::isHidden, module::setHidden, null));
+        }
         return rows;
     }
 

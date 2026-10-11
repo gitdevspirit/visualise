@@ -21,6 +21,9 @@ public class CategoryPanel {
     public boolean userMoved;
 
     private final List<ModuleButton> buttons = new ArrayList<>();
+    /** When set, the window's buttons are rebuilt from this list whenever ConfigManager.version changes. */
+    private java.util.function.Supplier<List<Module>> dynamic;
+    private int seenVersion = -1;
     private boolean dragging;
     private float dragOffX, dragOffY;
 
@@ -34,7 +37,26 @@ public class CategoryPanel {
         }
     }
 
+    /** Makes this a live window (the Configs list): buttons follow the supplier, keeping existing ones. */
+    public void setDynamic(java.util.function.Supplier<List<Module>> source) {
+        this.dynamic = source;
+        refreshDynamic();
+    }
+
+    private void refreshDynamic() {
+        if (dynamic == null || seenVersion == myau.config.ConfigManager.version) return;
+        seenVersion = myau.config.ConfigManager.version;
+        List<ModuleButton> old = new ArrayList<>(buttons);
+        buttons.clear();
+        for (Module m : dynamic.get()) {
+            ModuleButton keep = null;
+            for (ModuleButton b : old) if (b.module == m) keep = b;
+            buttons.add(keep != null ? keep : new ModuleButton(m));
+        }
+    }
+
     public float getHeight() {
+        refreshDynamic();
         float h = Theme.HEADER_H;
         if (!collapsed) {
             for (ModuleButton b : buttons) h += b.getHeight();
@@ -59,6 +81,7 @@ public class CategoryPanel {
     }
 
     public void draw(int mx, int my, float dt) {
+        refreshDynamic();
         if (dragging) {
             float nx = mx - dragOffX, ny = my - dragOffY;
             if (nx != x || ny != y) userMoved = true;

@@ -101,6 +101,7 @@ public class Myau {
         if (config.file.exists()) {
             config.load();
         }
+        myau.config.ConfigManager.init();
         if (friendManager.file.exists()) {
             friendManager.load();
         }
