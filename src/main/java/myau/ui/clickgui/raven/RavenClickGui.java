@@ -111,9 +111,19 @@ public class RavenClickGui extends GuiScreen {
 
         GuiRender.rect(0, 0, width, height, Theme.alpha(0x000000, (int) (0x70 * openAnim)));
 
+        // Opening animation: the windows grow from 92% to full size around the screen centre while the
+        // backdrop fades in (openAnim eases 0 -> 1). Mouse coordinates are mapped back so hover stays exact.
+        float scale = 0.92f + 0.08f * openAnim;
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(width / 2f, height / 2f, 0f);
+        GlStateManager.scale(scale, scale, 1f);
+        GlStateManager.translate(-width / 2f, -height / 2f, 0f);
+        int animX = (int) (width / 2f + (mouseX - width / 2f) / scale);
+        int animY = (int) (height / 2f + (mouseY - height / 2f) / scale);
         for (CategoryPanel p : panels) {
-            p.draw(mouseX, mouseY, dt);
+            p.draw(animX, animY, dt);
         }
+        GlStateManager.popMatrix();
 
         GlStateManager.enableCull();
         GlStateManager.color(1f, 1f, 1f, 1f);
