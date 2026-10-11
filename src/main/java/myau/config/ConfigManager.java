@@ -274,7 +274,27 @@ public class ConfigManager {
         msg("&f.c s <name>&7 save  &f.c l <name>&7 load  &f.c d <name>&7 delete  &f.c list  &f.c b <name> <key|none>");
     }
 
+    /** Chat line for command feedback (usage, list, errors): tagged "Config", not with the client name. */
     private static void msg(String s) {
-        ChatUtil.sendFormatted(Myau.clientName + s + "&r");
+        ChatUtil.sendFormatted("&7[&fConfig&7]&r " + s + "&r");
+    }
+
+    /**
+     * Result of a save / load: shown as a notification toast when the Notifications module is on
+     * (green for success, red for a problem), otherwise as a plain chat line.
+     */
+    public static void notify(String text, boolean ok) {
+        // Startup / shutdown loads and saves happen with no world: stay quiet.
+        if (net.minecraft.client.Minecraft.getMinecraft().thePlayer == null) return;
+        try {
+            myau.module.modules.Notifications n =
+                    (myau.module.modules.Notifications) Myau.moduleManager.getModule(myau.module.modules.Notifications.class);
+            if (n != null && n.isEnabled() && n.toasts.getValue() && Myau.notificationManager != null) {
+                Myau.notificationManager.add(text, (long) (n.duration.getValue() * 1000.0), ok ? 0x55FF55 : 0xFF5555);
+                return;
+            }
+        } catch (Exception ignored) {
+        }
+        ChatUtil.sendFormatted("&7[&fConfig&7]&r " + (ok ? "&a" : "&c") + text + "&r");
     }
 }

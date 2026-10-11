@@ -44,14 +44,14 @@ public class Config {
     public void load() {
         try {
             if (!file.exists()) {
-                ChatUtil.sendFormatted(String.format("%sConfig file not found (&c&o%s&r). Creating default config...&r", Myau.clientName, file.getName()));
+                ConfigManager.notify("Config not found: " + this.name + " (creating it)", false);
                 save();
                 return;
             }
 
             JsonElement parsed = new JsonParser().parse(new BufferedReader(new FileReader(file)));
             if (parsed == null || !parsed.isJsonObject()) {
-                ChatUtil.sendFormatted(String.format("%sInvalid config format (&c&o%s&r)&r", Myau.clientName, file.getName()));
+                ConfigManager.notify("Invalid config: " + this.name, false);
                 return;
             }
 
@@ -129,15 +129,15 @@ public class Config {
             
             
             
-            ChatUtil.sendFormatted(String.format("%sConfig has been loaded (&a&o%s&r)&r", Myau.clientName, file.getName()));
+            ConfigManager.notify("Config loaded: " + this.name, true);
         } catch (FileNotFoundException e) {
-            ChatUtil.sendFormatted(String.format("%sConfig file not found (&c&o%s&r)&r", Myau.clientName, file.getName()));
+            ConfigManager.notify("Config not found: " + this.name, false);
         } catch (JsonSyntaxException e) {
-            ChatUtil.sendFormatted(String.format("%sConfig has invalid JSON syntax (&c&o%s&r)&r", Myau.clientName, file.getName()));
+            ConfigManager.notify("Config has invalid JSON: " + this.name, false);
             ((IAccessorMinecraft) mc).getLogger().error("JSON Syntax Error: " + e.getMessage());
         } catch (Exception e) {
             ((IAccessorMinecraft) mc).getLogger().error("Error loading config: " + e.getMessage());
-            ChatUtil.sendFormatted(String.format("%sConfig couldn't be loaded (&c&o%s&r)&r", Myau.clientName, file.getName()));
+            ConfigManager.notify("Config couldn't be loaded: " + this.name, false);
         }
     }
 
@@ -203,10 +203,10 @@ public class Config {
             PrintWriter printWriter = new PrintWriter(new FileWriter(file));
             printWriter.println(gson.toJson(object));
             printWriter.close();
-            ChatUtil.sendFormatted(String.format("%sConfig has been saved (&a&o%s&r)&r", Myau.clientName, file.getName()));
+            ConfigManager.notify("Config saved: " + this.name, true);
         } catch (IOException e) {
             ((IAccessorMinecraft) mc).getLogger().error("Error saving config: " + e.getMessage());
-            ChatUtil.sendFormatted(String.format("%sConfig couldn't be saved (&c&o%s&r)&r", Myau.clientName, file.getName()));
+            ConfigManager.notify("Config couldn't be saved: " + this.name, false);
         }
     }
 }
