@@ -6,7 +6,7 @@ commands or account manager - just the rendering features and the ClickGUI to co
 ## Modules
 
 **Render:** ESP, Chams, Tracers, NameTags, BedESP, ItemESP, ChestESP, Xray, FullBright,
-Trajectories, ViewClip, NoHurtCam
+Trajectories, ViewClip, NoHurtCam, Capes (client-side Visualise cape, pick a colourway in the ClickGUI)
 
 **HUD:** HUD (arraylist), InfoHUD, TargetHUD, Indicators, Radar, FPScounter, Notifications,
 QualityOfLife (block overlay / keystrokes / CPS), ClickGui

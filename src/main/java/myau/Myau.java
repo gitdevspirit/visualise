@@ -67,6 +67,7 @@ public class Myau {
         register(new Trajectories());
         register(new ViewClip());
         register(new NoHurtCam());
+        register(new Capes());
         // ── HUD ──
         register(new HUD());
         register(new InfoHUD());

@@ -37,6 +37,7 @@ public class ModuleRegistry {
         renderModules.add(Myau.moduleManager.getModule(Trajectories.class));
         renderModules.add(Myau.moduleManager.getModule(ViewClip.class));
         renderModules.add(Myau.moduleManager.getModule(NoHurtCam.class));
+        renderModules.add(Myau.moduleManager.getModule(Capes.class));
         renderModules.sort(byName);
 
         movementModules = new ArrayList<>();

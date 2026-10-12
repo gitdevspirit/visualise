@@ -9,6 +9,7 @@
     "MixinGuiIngameHUD"
   ],
   "client": [
+    "MixinAbstractClientPlayer",
     "MixinBlock",
     "MixinBlockBush",
     "MixinBlockGrass",
