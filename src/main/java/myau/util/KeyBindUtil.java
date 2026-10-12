@@ -48,4 +48,28 @@ public class KeyBindUtil {
     public static void pressKeyOnce(int keyCode) {
         KeyBinding.onTick(keyCode);
     }
+
+    /**
+     * Parses a key name typed in chat: keyboard names (LWJGL) plus mouse buttons
+     * (LMB, RMB, MMB, MOUSE3, MOUSE4, ...). Returns null when the name is unknown.
+     */
+    public static Integer parseKeyName(String name) {
+        String n = name.trim().toUpperCase();
+        switch (n) {
+            case "LMB": case "LEFT": case "LEFTCLICK": return -100;
+            case "RMB": case "RIGHT": case "RIGHTCLICK": return -99;
+            case "MMB": case "MIDDLE": case "MIDDLECLICK": return -98;
+            default:
+        }
+        if (n.startsWith("MOUSE")) {
+            try {
+                int button = Integer.parseInt(n.substring(5));
+                if (button >= 0 && button < 16) return button - 100;
+            } catch (NumberFormatException ignored) {
+            }
+            return null;
+        }
+        int key = Keyboard.getKeyIndex(n);
+        return key == Keyboard.KEY_NONE ? null : key;
+    }
 }

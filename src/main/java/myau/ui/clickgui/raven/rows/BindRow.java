@@ -9,7 +9,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
-/** Keybind. Click, then press a key (or a mouse button 3+). Escape clears the bind. */
+/** Keybind. Click, then press a key or click any mouse button (left, right, middle, side). Escape clears the bind. */
 public class BindRow extends SettingRow {
 
     private final IntSupplier getter;
@@ -27,7 +27,7 @@ public class BindRow extends SettingRow {
         drawBase(mx, my);
         drawLabel(Theme.TEXT_ROW);
         if (listening) {
-            drawRight("...", accent);
+            drawRight("Press key / click...", accent);
         } else {
             int key = getter.getAsInt();
             drawRight(key == 0 ? "None" : "[" + KeyBindUtil.getKeyName(key) + "]", key == 0 ? Theme.TEXT_DIM : Theme.TEXT_ON);
@@ -36,7 +36,7 @@ public class BindRow extends SettingRow {
 
     @Override
     protected float rightWidth() {
-        if (listening) return GuiRender.textW("...");
+        if (listening) return GuiRender.textW("Press key / click...");
         int key = getter.getAsInt();
         return GuiRender.textW(key == 0 ? "None" : "[" + KeyBindUtil.getKeyName(key) + "]");
     }
@@ -61,16 +61,11 @@ public class BindRow extends SettingRow {
     @Override
     public boolean captureClick(int mx, int my, int button) {
         if (!listening) return false;
-        if (button >= 2) {
-            setter.accept(button - 100);
-            listening = false;
-            return true;
-        }
-        if (contains(mx, my)) {
-            listening = false;
-            return true;
-        }
-        return false;
+        // Any mouse button binds, including left (LMB = -100) and right (RMB = -99).
+        // Escape clears the bind instead.
+        setter.accept(button - 100);
+        listening = false;
+        return true;
     }
 
     @Override

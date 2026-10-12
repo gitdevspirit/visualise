@@ -257,11 +257,12 @@ public class ConfigManager {
                 if (a[2].equalsIgnoreCase("none") || a[2].equalsIgnoreCase("clear")) {
                     key = 0;
                 } else {
-                    key = Keyboard.getKeyIndex(a[2].toUpperCase());
-                    if (key == Keyboard.KEY_NONE) {
-                        msg("&cUnknown key &f" + a[2] + "&c.");
+                    Integer parsed = KeyBindUtil.parseKeyName(a[2]);
+                    if (parsed == null) {
+                        msg("&cUnknown key &f" + a[2] + "&c. &7Keys, or LMB / RMB / MMB / MOUSE4.");
                         return;
                     }
+                    key = parsed;
                 }
                 setBind(arg, key);
                 return;
@@ -271,7 +272,7 @@ public class ConfigManager {
     }
 
     private static void usage() {
-        msg("&f.c s <name>&7 save  &f.c l <name>&7 load  &f.c d <name>&7 delete  &f.c list  &f.c b <name> <key|none>");
+        msg("&f.c s <name>&7 save  &f.c l <name>&7 load  &f.c d <name>&7 delete  &f.c list  &f.c b <name> <key|LMB|RMB|none>");
     }
 
     /** Chat line for command feedback (usage, list, errors): tagged "Config", not with the client name. */
