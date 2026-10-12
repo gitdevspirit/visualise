@@ -7,41 +7,46 @@ import net.minecraft.util.ResourceLocation;
 /**
  * Client-side capes. Only the local player sees the cape; other players are untouched.
  * The actual swap happens in MixinAbstractClientPlayer, which asks {@link #getCapeLocation()}.
+ *
+ * The cape is picked from three independent options (click = next, right click = previous):
+ * Design x Colour x Quality, which maps to client/capes/{design}_{colour}_{quality}.png.
  */
 public class Capes extends Module {
-    // New entries are appended so existing saved configs keep pointing at the same cape.
-    private static final String[] NAMES = {
-            "Visualise", "Visualise Dark", "Visualise Neon",
-            "Visualise Lite", "Cat Eye", "Void Eye", "Sun Eye",
-            "Lite Dark", "Lite Neon", "Lite Cat Eye", "Lite Void Eye", "Lite Sun Eye"
-    };
-    private static final ResourceLocation[] TEXTURES = {
-            new ResourceLocation("client/capes/visualise.png"),
-            new ResourceLocation("client/capes/visualise_dark.png"),
-            new ResourceLocation("client/capes/visualise_neon.png"),
-            new ResourceLocation("client/capes/visualise_lite.png"),
-            new ResourceLocation("client/capes/cat_eye.png"),
-            new ResourceLocation("client/capes/void_eye.png"),
-            new ResourceLocation("client/capes/sun_eye.png"),
-            new ResourceLocation("client/capes/visualise_lite_dark.png"),
-            new ResourceLocation("client/capes/visualise_lite_neon.png"),
-            new ResourceLocation("client/capes/cat_eye_lite.png"),
-            new ResourceLocation("client/capes/void_eye_lite.png"),
-            new ResourceLocation("client/capes/sun_eye_lite.png")
-    };
+    private static final String[] DESIGN_NAMES = {"V", "Eye", "Column", "Wordmark", "Cat Eye", "Void Eye", "Sun Eye"};
+    private static final String[] DESIGN_IDS   = {"v", "eye", "column", "wordmark", "cat", "void", "sun"};
 
-    public final DropdownSetting cape = register(new DropdownSetting("Cape", 0, NAMES));
+    private static final String[] COLOUR_NAMES = {"Purple", "Dark", "Neon", "Crimson", "Emerald", "Ice", "Gold", "Sunset"};
+    private static final String[] COLOUR_IDS   = {"purple", "dark", "neon", "crimson", "emerald", "ice", "gold", "sunset"};
+
+    /** Low = 128x64 (twice vanilla), HD = 512x256 (same layout, 8x). */
+    private static final String[] QUALITY_NAMES = {"Low", "HD"};
+    private static final String[] QUALITY_IDS   = {"low", "hd"};
+
+    private static final ResourceLocation[][][] CACHE =
+            new ResourceLocation[DESIGN_IDS.length][COLOUR_IDS.length][QUALITY_IDS.length];
+
+    public final DropdownSetting design  = register(new DropdownSetting("Design", 0, DESIGN_NAMES));
+    public final DropdownSetting colour  = register(new DropdownSetting("Colour", 0, COLOUR_NAMES));
+    public final DropdownSetting quality = register(new DropdownSetting("Quality", 0, QUALITY_NAMES));
 
     public Capes() {
         super("Capes", false);
     }
 
-    /** The texture for the currently selected cape. */
+    /** The texture for the currently selected design, colour and quality. */
     public ResourceLocation getCapeLocation() {
-        int index = this.cape.getIndex();
-        if (index < 0 || index >= TEXTURES.length) {
-            index = 0;
+        int d = clamp(this.design.getIndex(), DESIGN_IDS.length);
+        int c = clamp(this.colour.getIndex(), COLOUR_IDS.length);
+        int q = clamp(this.quality.getIndex(), QUALITY_IDS.length);
+        ResourceLocation location = CACHE[d][c][q];
+        if (location == null) {
+            location = new ResourceLocation("client/capes/" + DESIGN_IDS[d] + "_" + COLOUR_IDS[c] + "_" + QUALITY_IDS[q] + ".png");
+            CACHE[d][c][q] = location;
         }
-        return TEXTURES[index];
+        return location;
+    }
+
+    private static int clamp(int index, int length) {
+        return index < 0 || index >= length ? 0 : index;
     }
 }
