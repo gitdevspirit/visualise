@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -130,7 +129,7 @@ public class RavenClickGui extends GuiScreen {
     }
 
     @Override
-    protected void mouseClicked(int mouseX, int mouseY, int button) throws IOException {
+    protected void mouseClicked(int mouseX, int mouseY, int button) {
         SettingRow capturing = findCapturing();
         if (capturing != null) {
             if (capturing.captureClick(mouseX, mouseY, button)) return;
@@ -155,7 +154,7 @@ public class RavenClickGui extends GuiScreen {
     }
 
     @Override
-    public void handleMouseInput() throws IOException {
+    public void handleMouseInput() {
         super.handleMouseInput();
         int wheel = Mouse.getEventDWheel();
         if (wheel != 0 && findCapturing() == null) {
@@ -164,7 +163,7 @@ public class RavenClickGui extends GuiScreen {
     }
 
     @Override
-    public void handleKeyboardInput() throws IOException {
+    public void handleKeyboardInput() {
         Module toggle = Myau.moduleManager.getModule(GuiModule.class);
         if (toggle != null && !Keyboard.getEventKeyState() && Keyboard.getEventKey() == toggle.getKey()) {
             toggleArmed = true;
@@ -173,7 +172,7 @@ public class RavenClickGui extends GuiScreen {
     }
 
     @Override
-    protected void keyTyped(char typedChar, int keyCode) throws IOException {
+    protected void keyTyped(char typedChar, int keyCode) {
         SettingRow capturing = findCapturing();
         if (capturing != null) {
             capturing.keyTyped(typedChar, keyCode);

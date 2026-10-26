@@ -371,7 +371,7 @@ public class ItemUtil {
         if (itemStack == null) {
             return false;
         }
-        if (ItemPotion.isSplash(itemStack.getItem().getMetadata(itemStack))) {
+        if (ItemPotion.isSplash(itemStack.getItemDamage())) {
             return false;
         }
         return itemStack.getItemUseAction() == EnumAction.EAT || itemStack.getItemUseAction() == EnumAction.DRINK;
