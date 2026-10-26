@@ -30,8 +30,9 @@ loom {
     // Calamus-based file, hand it to Loom as the intermediary (official -> intermediary layout).
     def calamusIntermediary = file("mappings/intermediary-1.8.9.jar")
     if (calamusIntermediary.exists()) {
-        def uri = calamusIntermediary.toURI().toString()
-        intermediaryUrl = { String minecraftVersion -> uri }
+        // intermediaryUrl is a String template (String.format with the MC version), so escape any '%'
+        // (e.g. %20 for a space in the path) as '%%'.
+        intermediaryUrl = calamusIntermediary.toURI().toString().replace("%", "%%")
     }
 }
 
