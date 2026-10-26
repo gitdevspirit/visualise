@@ -1,0 +1,65 @@
+plugins {
+    id 'fabric-loom' version "${loom_version}"
+    id 'legacy-looming' version "${loom_version}"
+    id 'maven-publish'
+}
+
+base {
+    archivesName = project.archives_base_name
+}
+
+version = project.mod_version
+group = project.maven_group
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+loom {
+    // Filters Hypixel scoreboard / sound spam out of the log.
+    log4jConfigs.from(file("log4j2.xml"))
+}
+
+// The source keeps its MCP names. tools/MakeMcpMappings.java chains Legacy Fabric's intermediary onto
+// MCP (mcp_stable 22 + joined.srg) and writes a Loom mappings jar whose "named" side is MCP.
+def mcpMappings = file("mappings/mcp-1.8.9.jar")
+if (!mcpMappings.exists()) {
+    throw new GradleException(
+        "mappings/mcp-1.8.9.jar not found. Generate it once with:  java tools/MakeMcpMappings.java")
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings files(mcpMappings)
+
+    // Fabric Loader ships Mixin; no Legacy Fabric API is needed, everything is hooked with mixins.
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching(['fabric.mod.json', 'version.json']) {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    // Build on a newer JDK but still emit Java 8 bytecode / API surface.
+    if (JavaVersion.current().isJava9Compatible()) {
+        it.options.release = 8
+    }
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}

@@ -12,8 +12,6 @@ import myau.module.ModuleManager;
 import myau.module.modules.*;
 import myau.property.Property;
 import myau.property.PropertyManager;
-import myau.render.RenderEventBridge;
-import net.minecraftforge.common.MinecraftForge;
 
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
@@ -119,8 +117,7 @@ public class Myau {
         } catch (Exception exception) {
             version = "dev";
         }
-
-        MinecraftForge.EVENT_BUS.register(new RenderEventBridge());
+        // Render3DEvent is fired by MixinEntityRenderer (replaces Forge's RenderWorldLastEvent).
     }
 
     private static void register(Module module) {

@@ -6,15 +6,12 @@ import myau.module.modules.ViewClip;
 import myau.module.modules.Xray;
 import net.minecraft.client.renderer.chunk.SetVisibility;
 import net.minecraft.client.renderer.chunk.VisGraph;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@SideOnly(Side.CLIENT)
 @Mixin(value = {VisGraph.class}, priority = 9999)
 public abstract class MixinVisGraph {
     @Inject(

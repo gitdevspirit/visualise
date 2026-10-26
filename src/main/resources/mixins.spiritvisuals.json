@@ -1,14 +1,17 @@
 {
   "required": true,
   "package": "myau.mixin",
-  "plugin": "myau.init.FMLLoadingPlugin",
-  "refmap": "mixins.spiritvisuals.refmap.json",
-  "minVersion": "0.7",
+  "minVersion": "0.8",
   "compatibilityLevel": "JAVA_8",
-  "mixins": [
-    "MixinGuiIngameHUD"
-  ],
+  "injectors": {
+    "defaultRequire": 0
+  },
   "client": [
+    "IAccessorEntity",
+    "IAccessorEntityRenderer",
+    "IAccessorItemSword",
+    "IAccessorMinecraft",
+    "IAccessorRenderManager",
     "MixinAbstractClientPlayer",
     "MixinBlock",
     "MixinBlockBush",
@@ -20,7 +23,7 @@
     "MixinBlockRendererDispatcher",
     "MixinBlockWeb",
     "MixinEntityRenderer",
-    "MixinGuiIngameForge",
+    "MixinGuiIngame",
     "MixinItemStack",
     "MixinMinecraft",
     "MixinMovementInputFromOptions",
@@ -28,6 +31,5 @@
     "MixinRendererLivingEntity",
     "MixinVisGraph",
     "MixinWorldRenderer"
-  ],
-  "server": []
+  ]
 }

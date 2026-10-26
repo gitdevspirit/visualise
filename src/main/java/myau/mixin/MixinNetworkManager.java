@@ -6,15 +6,12 @@ import myau.event.types.EventType;
 import myau.events.PacketEvent;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Only forwards packets to the event bus (used by Xray and TargetHUD). */
-@SideOnly(Side.CLIENT)
 @Mixin(value = {NetworkManager.class}, priority = 9999)
 public abstract class MixinNetworkManager {
     @Inject(method = {"channelRead0*"}, at = {@At("HEAD")}, cancellable = true)

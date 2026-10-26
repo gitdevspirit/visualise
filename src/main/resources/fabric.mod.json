@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "spiritvisuals",
+  "version": "${version}",
+  "name": "Spirit Visuals",
+  "description": "A client crafted by Spirit to make every game feel better. Sleek visuals, a clean ClickGUI, stylish notifications and configs, all in one lightweight package.",
+  "authors": ["Spirit"],
+  "license": "GPL-3.0-only",
+  "icon": "logo.png",
+  "environment": "client",
+  "mixins": ["mixins.spiritvisuals.json"],
+  "depends": {
+    "fabricloader": ">=0.14.0",
+    "minecraft": "1.8.9"
+  }
+}

@@ -192,6 +192,21 @@ public class ItemUtil {
         return bestSlot;
     }
 
+    /** Vanilla stand-in for Forge's Item#getToolClasses: "pickaxe", "axe" or "shovel". */
+    private static boolean isToolClass(ItemStack itemStack, String toolClass) {
+        Item item = itemStack.getItem();
+        switch (toolClass) {
+            case "pickaxe":
+                return item instanceof ItemPickaxe;
+            case "axe":
+                return item instanceof ItemAxe;
+            case "shovel":
+                return item instanceof ItemSpade;
+            default:
+                return false;
+        }
+    }
+
     public static int findInventorySlot(String toolClass, int startSlot, boolean checkDurability) {
         int bestSlot = -1;
         float bestEfficiency = 1.0f;
@@ -201,7 +216,7 @@ public class ItemUtil {
             ItemStack itemStack = ItemUtil.mc.thePlayer.inventory.getStackInSlot(currentSlot);
             if (itemStack == null) continue;
             if (!(itemStack.getItem() instanceof ItemTool)) continue;
-            if (!itemStack.getItem().getToolClasses(itemStack).contains(toolClass)) continue;
+            if (!ItemUtil.isToolClass(itemStack, toolClass)) continue;
             if (checkDurability) {
                 if (itemStack.isItemDamaged()) {
                     if (itemStack.getMaxDamage() - itemStack.getItemDamage() < 30) {

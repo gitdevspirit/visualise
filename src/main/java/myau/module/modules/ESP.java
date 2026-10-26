@@ -25,7 +25,7 @@ import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.AxisAlignedBB;
 
-import javax.vecmath.Vector4d;
+import myau.util.math.Vector4d;
 import java.awt.*;
 import java.util.List;
 import java.util.stream.Collectors;

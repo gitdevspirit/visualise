@@ -20,7 +20,6 @@ import net.minecraft.network.play.server.S23PacketBlockChange;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.Vec3;
 import net.minecraft.util.Vec3i;
-import net.minecraftforge.common.ForgeModContainer;
 
 import java.awt.*;
 import java.util.Arrays;
@@ -301,7 +300,7 @@ public class Xray extends Module {
 
     @Override
     public void onEnabled() {
-        ForgeModContainer.forgeLightPipelineEnabled = false;
+        // Forge's light pipeline toggle is not needed here: vanilla (Fabric) has no such pipeline.
         if (mc.renderGlobal != null) {
             mc.renderGlobal.loadRenderers();
         }
@@ -309,7 +308,6 @@ public class Xray extends Module {
 
     @Override
     public void onDisabled() {
-        ForgeModContainer.forgeLightPipelineEnabled = true;
         if (mc.renderGlobal != null) {
             mc.renderGlobal.loadRenderers();
         }

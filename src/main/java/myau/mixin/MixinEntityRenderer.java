@@ -1,6 +1,8 @@
 package myau.mixin;
 
 import myau.Myau;
+import myau.event.EventManager;
+import myau.events.Render3DEvent;
 import myau.module.modules.NoHurtCam;
 import net.minecraft.client.renderer.EntityRenderer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,5 +21,22 @@ public class MixinEntityRenderer {
         if (noHurtCam != null && noHurtCam.isEnabled() && noHurtCam.multiplier.getValue() == 0) {
             ci.cancel();
         }
+    }
+
+    /**
+     * Render3DEvent, replacing Forge's RenderWorldLastEvent. Forge dispatched it right before the "hand"
+     * profiler section, i.e. after the world is drawn, with the camera matrices still active and before
+     * the hand pass clears the depth buffer. Injecting before that section reproduces the same point.
+     */
+    @Inject(
+            method = "renderWorldPass",
+            at = @At(
+                    value = "INVOKE_STRING",
+                    target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V",
+                    args = "ldc=hand"
+            )
+    )
+    private void visualise$renderWorldLast(int pass, float partialTicks, long finishTimeNano, CallbackInfo ci) {
+        EventManager.call(new Render3DEvent(partialTicks));
     }
 }

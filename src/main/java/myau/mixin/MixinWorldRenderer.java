@@ -3,15 +3,12 @@ package myau.mixin;
 import myau.Myau;
 import myau.module.modules.Xray;
 import net.minecraft.client.renderer.WorldRenderer;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.nio.IntBuffer;
 
-@SideOnly(Side.CLIENT)
 @Mixin(value = {WorldRenderer.class}, priority = 9999)
 public abstract class MixinWorldRenderer {
     @Redirect(

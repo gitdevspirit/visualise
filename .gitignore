@@ -1,0 +1,13 @@
+# Gradle / Loom
+.gradle/
+build/
+run/
+out/
+
+# Generated MCP mappings (rebuild with: java tools/MakeMcpMappings.java)
+/mappings/
+
+# IDE
+.idea/
+*.iml
+.vscode/
