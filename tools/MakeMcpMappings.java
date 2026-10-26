@@ -21,10 +21,18 @@ import java.util.zip.*;
  * under mappings/cache/.
  */
 public class MakeMcpMappings {
-    static final String[] INTERMEDIARY_URLS = {
+    // Which intermediary the GAME runs on decides which one the mod must be built against.
+    // OneClient / Ornithe 1.8.9 = Calamus gen2. A Legacy Fabric instance = Legacy Fabric intermediary.
+    static final String[] CALAMUS_URLS = {
+        "https://maven.ornithemc.net/releases/net/ornithemc/calamus-intermediary-gen2/1.8.9/calamus-intermediary-gen2-1.8.9-v2.jar",
+        "https://maven.ornithemc.net/releases/net/ornithemc/calamus-intermediary-gen2/1.8.9/calamus-intermediary-gen2-1.8.9.jar",
+    };
+    static final String[] LEGACY_FABRIC_URLS = {
         "https://maven.legacyfabric.net/net/legacyfabric/intermediary/1.8.9/intermediary-1.8.9-v2.jar",
         "https://maven.legacyfabric.net/net/legacyfabric/intermediary/1.8.9/intermediary-1.8.9.jar",
     };
+    // If a download fails, pass the file with --intermediary (the launcher already has
+    // calamus-intermediary-gen2-1.8.9.jar in its libraries folder).
     static final String[] SRG_URLS = {
         "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.8.9/mcp-1.8.9-srg.zip",
     };
@@ -36,7 +44,8 @@ public class MakeMcpMappings {
     static class Intermediary {
         final Map<String, String> classes = new LinkedHashMap<>();                 // obf -> intermediary
         final Map<String, List<String[]>> methods = new LinkedHashMap<>();         // obfOwner -> [obfName, obfDesc, interName]
-        final Map<String, List<String[]>> fields = new LinkedHashMap<>();          // obfOwner -> [obfName, obfDesc, interName]
+        final Map<String, List<String[]>> fields = new LinkedHashMap<>();          // obfOwner -> [obfName, desc, interName]
+        boolean descInIntermediary;   // tiny v2: descriptors use the FIRST namespace (Calamus: intermediary, Legacy Fabric: official)
     }
     static class Srg {
         final Map<String, String> classes = new HashMap<>();   // obf -> srg/mcp class
@@ -55,7 +64,10 @@ public class MakeMcpMappings {
         Files.createDirectories(cache);
         if (out.getParent() != null) Files.createDirectories(out.getParent());
 
-        Path interFile = locate(opt.get("intermediary"), cache, "intermediary-1.8.9.jar", INTERMEDIARY_URLS);
+        String flavor = opt.getOrDefault("flavor", "calamus");
+        if (!flavor.equals("calamus") && !flavor.equals("legacy")) usage();
+        Path interFile = locate(opt.get("intermediary"), cache, flavor + "-intermediary-1.8.9.jar",
+                flavor.equals("calamus") ? CALAMUS_URLS : LEGACY_FABRIC_URLS);
         Path srgFile = locate(opt.get("srg"), cache, "mcp-1.8.9-srg.zip", SRG_URLS);
         Path csvFile = locate(opt.get("csv"), cache, "mcp_stable-22-1.8.9.zip", CSV_URLS);
 
@@ -74,18 +86,47 @@ public class MakeMcpMappings {
 
         String tiny = build(inter, srg, mcpMethods, mcpFields);
 
-        Manifest mf = new Manifest();
-        mf.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
-        try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(out), mf)) {
-            jos.putNextEntry(new JarEntry("mappings/mappings.tiny"));
-            jos.write(tiny.getBytes(StandardCharsets.UTF_8));
-            jos.closeEntry();
+        // Loom (via Legacy Looming) expects an "official -> intermediary" file. Calamus gen2 ships
+        // "intermediary, clientOfficial, serverOfficial", so re-emit it in the shape Loom understands,
+        // keeping Calamus' numbering. build.gradle points Loom at this file.
+        Path loomInter = out.resolveSibling("intermediary-1.8.9.jar");
+        Files.deleteIfExists(loomInter);
+        if (inter.descInIntermediary) {
+            writeJar(loomInter, "mappings/mappings.tiny", loomIntermediary(inter));
+            System.out.println("Wrote " + loomInter.toAbsolutePath() + "  (Calamus names, official->intermediary layout)");
         }
+
+        writeJar(out, "mappings/mappings.tiny", tiny);
         System.out.println("Wrote " + out.toAbsolutePath());
     }
 
+    static void writeJar(Path out, String entry, String text) throws IOException {
+        Manifest mf = new Manifest();
+        mf.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(out), mf)) {
+            jos.putNextEntry(new JarEntry(entry));
+            jos.write(text.getBytes(StandardCharsets.UTF_8));
+            jos.closeEntry();
+        }
+    }
+
+    /** Re-emits a Calamus-style file as "tiny v2: official, intermediary" (descriptors in official names). */
+    static String loomIntermediary(Intermediary inter) {
+        Map<String, String> reverse = new HashMap<>();
+        for (Map.Entry<String, String> c : inter.classes.entrySet()) reverse.put(c.getValue(), c.getKey());
+        StringBuilder sb = new StringBuilder("tiny\t2\t0\tofficial\tintermediary\n");
+        for (Map.Entry<String, String> c : inter.classes.entrySet()) {
+            sb.append("c\t").append(c.getKey()).append('\t').append(c.getValue()).append('\n');
+            for (String[] f : inter.fields.getOrDefault(c.getKey(), Collections.<String[]>emptyList()))
+                sb.append("\tf\t").append(remapDesc(f[1], reverse)).append('\t').append(f[0]).append('\t').append(f[2]).append('\n');
+            for (String[] m : inter.methods.getOrDefault(c.getKey(), Collections.<String[]>emptyList()))
+                sb.append("\tm\t").append(remapDesc(m[1], reverse)).append('\t').append(m[0]).append('\t').append(m[2]).append('\n');
+        }
+        return sb.toString();
+    }
+
     static void usage() {
-        System.err.println("usage: java tools/MakeMcpMappings.java [--out jar] [--intermediary f] [--srg f] [--csv f] [--cache dir]");
+        System.err.println("usage: java tools/MakeMcpMappings.java [--out jar] [--intermediary f] [--flavor calamus|legacy] [--srg f] [--csv f] [--cache dir]");
         System.exit(2);
     }
 
@@ -93,6 +134,9 @@ public class MakeMcpMappings {
     static String build(Intermediary inter, Srg srg, Map<String, String> mcpMethods, Map<String, String> mcpFields) {
         StringBuilder sb = new StringBuilder("tiny\t2\t0\tintermediary\tnamed\n");
         int mappedMethods = 0, mappedFields = 0, srgOnlyMethods = 0, srgOnlyFields = 0, dupes = 0, noSrgClass = 0;
+
+        Map<String, String> reverse = new HashMap<>();   // intermediary -> obfuscated
+        for (Map.Entry<String, String> c : inter.classes.entrySet()) reverse.put(c.getValue(), c.getKey());
 
         for (Map.Entry<String, String> c : inter.classes.entrySet()) {
             String obf = c.getKey(), interName = c.getValue();
@@ -103,11 +147,12 @@ public class MakeMcpMappings {
             Set<String> seen = new HashSet<>();
 
             for (String[] m : inter.methods.getOrDefault(obf, Collections.<String[]>emptyList())) {
-                String srgName = srg.methods.get(obf + " " + m[0] + " " + m[1]);
+                String obfDesc = inter.descInIntermediary ? remapDesc(m[1], reverse) : m[1];
+                String srgName = srg.methods.get(obf + " " + m[0] + " " + obfDesc);
                 if (srgName == null) continue;
                 String named = mcpMethods.get(srgName);
                 if (named == null) { named = srgName; srgOnlyMethods++; }
-                String desc = remapDesc(m[1], inter.classes);
+                String desc = inter.descInIntermediary ? m[1] : remapDesc(m[1], inter.classes);
                 if (!seen.add("m " + named + desc)) {           // MCP name clash inside one class: keep SRG name
                     named = srgName; dupes++;
                     seen.add("m " + named + desc);
@@ -120,7 +165,7 @@ public class MakeMcpMappings {
                 if (srgName == null) continue;
                 String named = mcpFields.get(srgName);
                 if (named == null) { named = srgName; srgOnlyFields++; }
-                String desc = remapDesc(f[1], inter.classes);
+                String desc = inter.descInIntermediary ? f[1] : remapDesc(f[1], inter.classes);
                 if (!seen.add("f " + named)) { named = srgName; dupes++; seen.add("f " + named); }
                 members.append("\tf\t").append(desc).append('\t').append(f[2]).append('\t').append(named).append('\n');
                 mappedFields++;
@@ -161,9 +206,15 @@ public class MakeMcpMappings {
         String[] head = lines[0].split("\t");
         boolean v2 = head[0].equals("tiny");
         int srcIdx = 0, interIdx = 1;
+        r.descInIntermediary = v2 && head.length > 3 && head[3].equals("intermediary");
         List<String> ns = new ArrayList<>(Arrays.asList(head).subList(v2 ? 3 : 1, head.length));
-        if (ns.contains("official")) srcIdx = ns.indexOf("official");
+        // Legacy Fabric uses "official"; Calamus (Ornithe) gen2 splits it into clientOfficial / serverOfficial.
+        // MCP's joined.srg is keyed on the client's obfuscated names, so prefer the client column.
+        for (String cand : new String[]{"official", "clientOfficial", "serverOfficial"}) {
+            if (ns.contains(cand)) { srcIdx = ns.indexOf(cand); break; }
+        }
         if (ns.contains("intermediary")) interIdx = ns.indexOf("intermediary");
+        System.out.println("  namespaces " + ns + " -> obfuscated=" + ns.get(srcIdx) + ", intermediary=" + ns.get(interIdx));
 
         String curOwner = null;
         for (int i = 1; i < lines.length; i++) {
@@ -249,7 +300,7 @@ public class MakeMcpMappings {
             } catch (IOException e) { last = e; System.err.println("  failed: " + e.getMessage()); }
         }
         throw new IOException("Could not download " + cacheName + ". Download it manually and pass it with --"
-                + (cacheName.startsWith("inter") ? "intermediary" : cacheName.startsWith("mcp_") ? "csv" : "srg") + " <file>.", last);
+                + (cacheName.contains("intermediary") ? "intermediary" : cacheName.startsWith("mcp_") ? "csv" : "srg") + " <file>.", last);
     }
 
     static String readText(Path file, String entryName, String suffix) throws IOException {

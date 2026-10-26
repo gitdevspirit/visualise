@@ -24,6 +24,15 @@ repositories {
 loom {
     // Filters Hypixel scoreboard / sound spam out of the log.
     log4jConfigs.from(file("log4j2.xml"))
+
+    // OneClient / Ornithe run 1.8.9 on Calamus gen2 intermediary, not Legacy Fabric's. The mixins must be
+    // remapped to the numbering the game actually uses, so when tools/MakeMcpMappings.java produced a
+    // Calamus-based file, hand it to Loom as the intermediary (official -> intermediary layout).
+    def calamusIntermediary = file("mappings/intermediary-1.8.9.jar")
+    if (calamusIntermediary.exists()) {
+        def uri = calamusIntermediary.toURI().toString()
+        intermediaryUrl = { String minecraftVersion -> uri }
+    }
 }
 
 // The source keeps its MCP names. tools/MakeMcpMappings.java chains Legacy Fabric's intermediary onto

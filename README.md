@@ -22,15 +22,19 @@ The source keeps the MCP names it was written with. `tools/MakeMcpMappings.java`
 Loom uses as its "named" mappings. Generate it once (it downloads the data and caches it in `mappings/cache/`):
 
 ```bash
-java tools/MakeMcpMappings.java      # -> mappings/mcp-1.8.9.jar
+java tools/MakeMcpMappings.java      # -> mappings/mcp-1.8.9.jar (+ mappings/intermediary-1.8.9.jar)
 ./gradlew build                      # jar ends up in build/libs/
 ./gradlew runClient                  # dev client
 ```
 
-If a download is blocked, fetch the files yourself and pass them in:
+**Which intermediary?** The jar must be built against the intermediary the game runs on, otherwise every mixin
+fails with "@Mixin target net.minecraft.class_NNN was not found". The default is **Calamus gen2**, which is what
+OneClient / Ornithe use for 1.8.9. For a plain Legacy Fabric instance use `--flavor legacy`.
+
+If a download is blocked, fetch the files yourself and pass them in (the launcher already has
+`calamus-intermediary-gen2-1.8.9.jar` in its libraries folder):
 `java tools/MakeMcpMappings.java --intermediary <jar|tiny> --srg <mcp-1.8.9-srg.zip> --csv <mcp_stable-22-1.8.9.zip>`.
 
-Install the built jar into a Legacy Fabric 1.8.9 instance (Fabric Loader + Legacy Fabric intermediary).
 No Legacy Fabric API is required.
 
 ## Layout
