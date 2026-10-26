@@ -66,13 +66,19 @@ public class MakeMcpMappings {
 
         String flavor = opt.getOrDefault("flavor", "calamus");
         if (!flavor.equals("calamus") && !flavor.equals("legacy")) usage();
-        Path interFile = locate(opt.get("intermediary"), cache, flavor + "-intermediary-1.8.9.jar",
+        String interOpt = opt.get("intermediary");
+        Path bundled = Paths.get("tools/data/calamus-intermediary-gen2-1.8.9.jar");
+        if (interOpt == null && flavor.equals("calamus") && Files.exists(bundled)) {
+            interOpt = bundled.toString();   // the exact file OneClient/Ornithe ship: no guessing at download URLs
+        }
+        Path interFile = locate(interOpt, cache, flavor + "-intermediary-1.8.9.jar",
                 flavor.equals("calamus") ? CALAMUS_URLS : LEGACY_FABRIC_URLS);
         Path srgFile = locate(opt.get("srg"), cache, "mcp-1.8.9-srg.zip", SRG_URLS);
         Path csvFile = locate(opt.get("csv"), cache, "mcp_stable-22-1.8.9.zip", CSV_URLS);
 
         System.out.println("Reading intermediary: " + interFile);
-        Intermediary inter = parseIntermediary(readText(interFile, "mappings/mappings.tiny", ".tiny"));
+        String interText = readText(interFile, "mappings/mappings.tiny", ".tiny");
+        Intermediary inter = parseIntermediary(interText);
         System.out.println("  " + inter.classes.size() + " classes");
 
         System.out.println("Reading SRG: " + srgFile);
@@ -86,18 +92,34 @@ public class MakeMcpMappings {
 
         String tiny = build(inter, srg, mcpMethods, mcpFields);
 
-        // Loom (via Legacy Looming) expects an "official -> intermediary" file. Calamus gen2 ships
-        // "intermediary, clientOfficial, serverOfficial", so re-emit it in the shape Loom understands,
-        // keeping Calamus' numbering. build.gradle points Loom at this file.
+        // Loom (via Legacy Looming) expects an "official -> intermediary" file. For Calamus we hand it the
+        // Calamus file itself (re-emitted in that layout if it came as v2), so the mod is remapped to the
+        // names the game really runs on. build.gradle points Loom at this file.
         Path loomInter = out.resolveSibling("intermediary-1.8.9.jar");
         Files.deleteIfExists(loomInter);
-        if (inter.descInIntermediary) {
-            writeJar(loomInter, "mappings/mappings.tiny", loomIntermediary(inter));
+        if (flavor.equals("calamus")) {
+            checkCalamusNames(inter);
+            String loomText = inter.descInIntermediary ? loomIntermediary(inter) : interText;
+            writeJar(loomInter, "mappings/mappings.tiny", loomText);
             System.out.println("Wrote " + loomInter.toAbsolutePath() + "  (Calamus names, official->intermediary layout)");
         }
 
         writeJar(out, "mappings/mappings.tiny", tiny);
         System.out.println("Wrote " + out.toAbsolutePath());
+    }
+
+    /** Calamus gen2 names look like net/minecraft/unmapped/C_12345678; gen1 / Legacy Fabric look like class_123. */
+    static void checkCalamusNames(Intermediary inter) {
+        int gen2 = 0, gen1 = 0;
+        for (String n : inter.classes.values()) {
+            if (n.contains("/C_")) gen2++;
+            else if (n.contains("class_")) gen1++;
+        }
+        System.out.println("  intermediary style: " + gen2 + " Calamus gen2 (C_...) classes, " + gen1 + " class_N classes");
+        if (gen2 == 0 || gen1 > gen2) {
+            throw new IllegalStateException("--flavor calamus but the intermediary has no C_... names (looks like Legacy Fabric / gen1). "
+                    + "The game (OneClient/Ornithe) would not find these classes. Use tools/data/calamus-intermediary-gen2-1.8.9.jar.");
+        }
     }
 
     static void writeJar(Path out, String entry, String text) throws IOException {

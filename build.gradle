@@ -35,7 +35,7 @@ loom {
     }
 }
 
-// The source keeps its MCP names. tools/MakeMcpMappings.java chains Legacy Fabric's intermediary onto
+// The source keeps its MCP names. tools/MakeMcpMappings.java chains the intermediary (Calamus gen2) onto
 // MCP (mcp_stable 22 + joined.srg) and writes a Loom mappings jar whose "named" side is MCP.
 def mcpMappings = file("mappings/mcp-1.8.9.jar")
 if (!mcpMappings.exists()) {

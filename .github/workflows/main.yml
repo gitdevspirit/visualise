@@ -35,7 +35,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Generate MCP -> Legacy Fabric mappings
+      - name: Generate MCP -> Calamus gen2 mappings
         run: java tools/MakeMcpMappings.java
 
       - name: Read version
