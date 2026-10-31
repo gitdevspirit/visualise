@@ -1,7 +1,8 @@
 pluginManagement {
     repositories {
         maven { url = 'https://maven.fabricmc.net/' }
-        maven { url = 'https://maven.legacyfabric.net/' }
+        // Hosts the Ploceus plugin (Ornithe's Gradle plugin).
+        maven { url = 'https://maven.ornithemc.net/releases' }
         mavenCentral()
         gradlePluginPortal()
     }

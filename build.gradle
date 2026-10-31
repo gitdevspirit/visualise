@@ -1,6 +1,8 @@
 plugins {
     id 'fabric-loom' version "${loom_version}"
-    id 'legacy-looming' version "${loom_version}"
+    // Ornithe's Gradle plugin: sets up Ornithe's Calamus intermediary for the Minecraft version. fabric-loom and
+    // ploceus must use the same version (see gradle.properties).
+    id 'ploceus' version "${loom_version}"
     id 'maven-publish'
 }
 
@@ -18,26 +20,18 @@ java {
 }
 
 repositories {
+    // Loom / Ploceus add the Minecraft, Fabric and Ornithe repositories themselves.
     mavenCentral()
 }
 
 loom {
     // Filters Hypixel scoreboard / sound spam out of the log.
     log4jConfigs.from(file("log4j2.xml"))
-
-    // OneClient / Ornithe run 1.8.9 on Calamus gen2 intermediary, not Legacy Fabric's. The mixins must be
-    // remapped to the numbering the game actually uses, so when tools/MakeMcpMappings.java produced a
-    // Calamus-based file, hand it to Loom as the intermediary (official -> intermediary layout).
-    def calamusIntermediary = file("mappings/intermediary-1.8.9.jar")
-    if (calamusIntermediary.exists()) {
-        // intermediaryUrl is a String template (String.format with the MC version), so escape any '%'
-        // (e.g. %20 for a space in the path) as '%%'.
-        intermediaryUrl = calamusIntermediary.toURI().toString().replace("%", "%%")
-    }
 }
 
-// The source keeps its MCP names. tools/MakeMcpMappings.java chains the intermediary (Calamus gen2) onto
-// MCP (mcp_stable 22 + joined.srg) and writes a Loom mappings jar whose "named" side is MCP.
+// The source keeps its MCP names. tools/MakeMcpMappings.java chains the intermediary (Calamus gen2, the one
+// Ornithe uses for 1.8.9) onto MCP (mcp_stable 22 + joined.srg) and writes a mappings jar (tiny v2,
+// intermediary -> named) whose "named" side is MCP. Ploceus provides the matching Calamus intermediary.
 def mcpMappings = file("mappings/mcp-1.8.9.jar")
 if (!mcpMappings.exists()) {
     throw new GradleException(
@@ -48,7 +42,7 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings files(mcpMappings)
 
-    // Fabric Loader ships Mixin; no Legacy Fabric API is needed, everything is hooked with mixins.
+    // Fabric Loader ships Mixin; no Ornithe Standard Libraries are needed, everything is hooked with mixins.
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 }
 

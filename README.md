@@ -1,6 +1,6 @@
 # Spirit Visuals
 
-Visual-only extraction of the Spirit client for **Fabric 1.8.9** (via [Legacy Fabric](https://legacyfabric.net)). No combat, movement, anticheat,
+Visual-only extraction of the Spirit client for **Fabric 1.8.9 on [Ornithe](https://ornithemc.net)**. No combat, movement, anticheat,
 commands or account manager - just the rendering features and the ClickGUI to control them.
 
 ## Modules
@@ -15,33 +15,36 @@ Open the ClickGUI with **Right Shift**.
 
 ## Build
 
-Needs JDK 17 to run Gradle (the mod itself compiles to Java 8 bytecode).
+Needs JDK 21 to run Gradle (the mod itself compiles to Java 8 bytecode). The build uses Fabric Loom plus
+[Ploceus](https://github.com/OrnitheMC/ploceus), Ornithe's Gradle plugin, which supplies Ornithe's Calamus intermediary.
 
-The source keeps the MCP names it was written with. `tools/MakeMcpMappings.java` chains Legacy Fabric's
+The source keeps the MCP names it was written with. `tools/MakeMcpMappings.java` chains Ornithe's Calamus gen2
 1.8.9 intermediary onto MCP (`mcp_stable` 22 + `joined.srg`) and writes `mappings/mcp-1.8.9.jar`, which
 Loom uses as its "named" mappings. Generate it once (it downloads the data and caches it in `mappings/cache/`):
 
 ```bash
-java tools/MakeMcpMappings.java      # -> mappings/mcp-1.8.9.jar (+ mappings/intermediary-1.8.9.jar)
+java tools/MakeMcpMappings.java      # -> mappings/mcp-1.8.9.jar
 ./gradlew build                      # jar ends up in build/libs/
 ./gradlew runClient                  # dev client
 ```
 
 **Which intermediary?** The jar must be built against the intermediary the game runs on, otherwise every mixin
-fails with "@Mixin target net.minecraft.class_NNN was not found". The default is **Calamus gen2**, which is what
-OneClient / Ornithe use for 1.8.9. For a plain Legacy Fabric instance use `--flavor legacy`.
+fails with "@Mixin target net.minecraft.unmapped.C_NNN was not found". The default is **Calamus gen2**, which is what
+Ornithe / OneClient use for 1.8.9; `tools/data/calamus-intermediary-gen2-1.8.9.jar` is that file. (`--flavor legacy`
+still builds mappings for a plain Legacy Fabric instance, but the Gradle build itself now targets Ornithe.)
 
-If a download is blocked, fetch the files yourself and pass them in (the launcher already has
-`calamus-intermediary-gen2-1.8.9.jar` in its libraries folder):
+If a download is blocked, fetch the files yourself and pass them in:
 `java tools/MakeMcpMappings.java --intermediary <jar|tiny> --srg <mcp-1.8.9-srg.zip> --csv <mcp_stable-22-1.8.9.zip>`.
 
-No Legacy Fabric API is required.
+No Fabric API or Ornithe Standard Libraries are required.
+
+If Gradle reports that Loom needs a newer Gradle, bump the wrapper with `./gradlew wrapper --gradle-version <version>`.
 
 ## Layout
 
 - `myau/module`, `myau/property` - module + setting system
 - `myau/module/modules` - the visual modules
-- `myau/ui/clickgui` - ClickGUI (`VapeClickGui`, `GuiRender`, `RoundedUtils`, `ModuleRegistry`)
+- `myau/ui/clickgui` - ClickGUI (`raven/RavenClickGui`, `GuiRender`, `RoundedUtils`, `ModuleRegistry`)
 - `myau/ui/hud` - arraylist renderer
 - `myau/util` (+ `render`, `shader`), `myau/font` - rendering helpers
 - `myau/mixin` - only the render/event mixins (`mixins.spiritvisuals.json` lists them; `fabric.mod.json` is the mod metadata)

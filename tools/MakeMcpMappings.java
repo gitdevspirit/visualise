@@ -9,11 +9,11 @@ import java.util.zip.*;
 
 /**
  * Builds a Loom-compatible mappings jar whose "named" side is MCP (mcp_stable 22, 1.8.9),
- * keyed on Legacy Fabric's 1.8.9 intermediary names.
+ * keyed on the 1.8.9 intermediary names (Ornithe's Calamus gen2 by default; --flavor legacy for Legacy Fabric).
  *
- *   intermediary (method_123)  ->  obfuscated (a)  ->  SRG (func_1_a)  ->  MCP (renderGameOverlay)
+ *   intermediary (C_123 / method_123)  ->  obfuscated (a)  ->  SRG (func_1_a)  ->  MCP (renderGameOverlay)
  *
- * This lets the Forge-era MCP-named source compile and run on Legacy Fabric without renaming anything.
+ * This lets the Forge-era MCP-named source compile and run on Ornithe without renaming anything.
  *
  * Usage (JDK 11+):   java tools/MakeMcpMappings.java [--out mappings/mcp-1.8.9.jar]
  *                                                    [--intermediary file] [--srg file] [--csv file]
@@ -92,9 +92,9 @@ public class MakeMcpMappings {
 
         String tiny = build(inter, srg, mcpMethods, mcpFields);
 
-        // Loom (via Legacy Looming) expects an "official -> intermediary" file. For Calamus we hand it the
-        // Calamus file itself (re-emitted in that layout if it came as v2), so the mod is remapped to the
-        // names the game really runs on. build.gradle points Loom at this file.
+        // Also emit the Calamus file in the "official -> intermediary" layout Legacy Looming wanted. The Ornithe
+        // build (Ploceus) supplies its own Calamus intermediary and no longer reads this file; it is only kept
+        // for anyone still building with Legacy Looming.
         Path loomInter = out.resolveSibling("intermediary-1.8.9.jar");
         Files.deleteIfExists(loomInter);
         if (flavor.equals("calamus")) {
