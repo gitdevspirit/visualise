@@ -1,8 +1,10 @@
 pluginManagement {
     repositories {
         maven { url = 'https://maven.fabricmc.net/' }
-        // Hosts the Ploceus plugin (Ornithe's Gradle plugin).
+        // Host the Ploceus plugin (Ornithe's Gradle plugin). loom_version is a -SNAPSHOT, and Ornithe publishes
+        // snapshots in their own repository, separate from releases.
         maven { url = 'https://maven.ornithemc.net/releases' }
+        maven { url = 'https://maven.ornithemc.net/snapshots' }
         mavenCentral()
         gradlePluginPortal()
     }
