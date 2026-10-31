@@ -2,7 +2,6 @@ package myau.config;
 
 import com.google.gson.*;
 import myau.Myau;
-import myau.mixin.IAccessorMinecraft;
 import myau.module.Module;
 import myau.module.BooleanSetting;
 import myau.module.DropdownSetting;
@@ -12,11 +11,16 @@ import myau.module.SliderSetting;
 import myau.util.ChatUtil;
 import myau.property.Property;
 import net.minecraft.client.Minecraft;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.util.ArrayList;
 
 public class Config {
+    // Own logger instead of Minecraft's private static one: this class runs inside Myau.init() at startup, so it
+    // must not depend on a mixin accessor having applied (a failed accessor means a ClassCastException here).
+    private static final Logger LOGGER = LogManager.getLogger("SpiritVisuals");
     public static Minecraft mc = Minecraft.getMinecraft();
     public static Gson gson = new GsonBuilder().setPrettyPrinting().create();
     public String name;
@@ -34,10 +38,10 @@ public class Config {
         try {
             file.getParentFile().mkdirs();
             if (newConfig) {
-                ((IAccessorMinecraft) mc).getLogger().info(String.format("Created: %s", this.file.getName()));
+                LOGGER.info(String.format("Created: %s", this.file.getName()));
             }
         } catch (Exception e) {
-            ((IAccessorMinecraft) mc).getLogger().error(e.getMessage());
+            LOGGER.error(e.getMessage());
         }
     }
 
@@ -69,7 +73,7 @@ public class Config {
                                 try {
                                     property.read(object);
                                 } catch (Exception e) {
-                                    ((IAccessorMinecraft) mc).getLogger().warn(
+                                    LOGGER.warn(
                                         String.format("Failed to load property %s for module %s",
                                             property.getName(), module.getName()));
                                 }
@@ -97,7 +101,7 @@ public class Config {
                                         settingsObj.get(setting.getName()).getAsInt());
                                 }
                             } catch (Exception e) {
-                                ((IAccessorMinecraft) mc).getLogger().warn(
+                                LOGGER.warn(
                                     String.format("Failed to load setting %s for module %s",
                                         setting.getName(), module.getName()));
                             }
@@ -134,9 +138,9 @@ public class Config {
             ConfigManager.notify("NOT FOUND", this.name, false);
         } catch (JsonSyntaxException e) {
             ConfigManager.notify("INVALID JSON", this.name, false);
-            ((IAccessorMinecraft) mc).getLogger().error("JSON Syntax Error: " + e.getMessage());
+            LOGGER.error("JSON Syntax Error: " + e.getMessage());
         } catch (Exception e) {
-            ((IAccessorMinecraft) mc).getLogger().error("Error loading config: " + e.getMessage());
+            LOGGER.error("Error loading config: " + e.getMessage());
             ConfigManager.notify("LOAD FAILED", this.name, false);
         }
     }
@@ -163,7 +167,7 @@ public class Config {
                         try {
                             property.write(moduleObject);
                         } catch (Exception e) {
-                            ((IAccessorMinecraft) mc).getLogger().warn(
+                            LOGGER.warn(
                                 String.format("Failed to save property %s for module %s",
                                     property.getName(), module.getName()));
                         }
@@ -189,7 +193,7 @@ public class Config {
                                     ((DropdownSetting) setting).getIndex());
                             }
                         } catch (Exception e) {
-                            ((IAccessorMinecraft) mc).getLogger().warn(
+                            LOGGER.warn(
                                 String.format("Failed to save setting %s for module %s",
                                     setting.getName(), module.getName()));
                         }
@@ -205,7 +209,7 @@ public class Config {
             printWriter.close();
             ConfigManager.notify("SAVED", this.name, true);
         } catch (IOException e) {
-            ((IAccessorMinecraft) mc).getLogger().error("Error saving config: " + e.getMessage());
+            LOGGER.error("Error saving config: " + e.getMessage());
             ConfigManager.notify("SAVE FAILED", this.name, false);
         }
     }

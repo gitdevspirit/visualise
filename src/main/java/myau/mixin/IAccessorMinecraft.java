@@ -2,15 +2,11 @@ package myau.mixin;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Timer;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin({Minecraft.class})
 public interface IAccessorMinecraft {
-    @Accessor
-    Logger getLogger();
-
     @Accessor("timer")
     Timer getTimer();
 
