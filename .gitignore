@@ -11,3 +11,7 @@ out/
 .idea/
 *.iml
 .vscode/
+
+# Launch injector build output / downloaded ASM
+injector/build/
+injector/lib/

@@ -46,6 +46,21 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 }
 
+// --- Launch injector (Lunar / Badlion) ---------------------------------------------------------------------
+// Hooks/Sink are what the payload talks to; they are compiled in but shipped inside the injector's own agent jar,
+// not in the payload jar (see injector/README.md).
+sourceSets.main.java.srcDir 'injector/loader/src'
+
+tasks.register('payloadJar', Jar) {
+    group = 'injector'
+    description = 'MCP-named payload for the launch injector (remapped to the client\'s names when the game loads it)'
+    dependsOn classes
+    archiveFileName = 'visualise-payload.jar'
+    destinationDirectory = layout.buildDirectory.dir('injector')
+    from(sourceSets.main.output.classesDirs)
+    exclude 'visualise/**', 'myau/mixin/Mixin*'
+}
+
 processResources {
     inputs.property "version", project.version
 

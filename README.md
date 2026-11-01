@@ -40,6 +40,12 @@ No Fabric API or Ornithe Standard Libraries are required.
 
 If Gradle reports that Loom needs a newer Gradle, bump the wrapper with `./gradlew wrapper --gradle-version <version>`.
 
+## Launch injection (Lunar / Badlion)
+
+`injector/` loads the same code into Lunar or Badlion through a JVM `-agentpath` argument instead of Fabric. See
+[`injector/README.md`](injector/README.md) for the build steps, what has been verified, and which modules are
+ported (render/HUD events yes; Xray, Chams, NoHurtCam and Capes not yet).
+
 ## Layout
 
 - `myau/module`, `myau/property` - module + setting system

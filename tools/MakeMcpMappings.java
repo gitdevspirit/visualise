@@ -106,6 +106,14 @@ public class MakeMcpMappings {
 
         writeJar(out, "mappings/mappings.tiny", tiny);
         System.out.println("Wrote " + out.toAbsolutePath());
+
+        // MCP -> obfuscated names for the launch injector (Lunar / Badlion run vanilla-obfuscated 1.8.9).
+        if (opt.containsKey("obf-map")) {
+            Path obfOut = Paths.get(opt.get("obf-map"));
+            if (obfOut.getParent() != null) Files.createDirectories(obfOut.getParent());
+            Files.write(obfOut, writeObfMap(srg, mcpMethods, mcpFields).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            System.out.println("Wrote " + obfOut.toAbsolutePath() + "  (MCP -> obfuscated, for injector/)");
+        }
     }
 
     /** Calamus gen2 names look like net/minecraft/unmapped/C_12345678; gen1 / Legacy Fabric look like class_123. */
@@ -150,6 +158,41 @@ public class MakeMcpMappings {
     static void usage() {
         System.err.println("usage: java tools/MakeMcpMappings.java [--out jar] [--intermediary f] [--flavor calamus|legacy] [--srg f] [--csv f] [--cache dir]");
         System.exit(2);
+    }
+
+    // ---------------------------------------------------------------- obf map
+    /**
+     * Tab-separated MCP -> obfuscated lookup used by injector/ (see injector/engine Mapper):
+     *   C mcpClass obfClass | F mcpOwner mcpName obfName | M mcpOwner mcpName mcpDesc obfName
+     * Uses the same naming rule as build() (an MCP name that clashes inside one class keeps its SRG name), so the
+     * names the payload was compiled against are exactly the names that get mapped back.
+     */
+    static String writeObfMap(Srg srg, Map<String, String> mcpMethods, Map<String, String> mcpFields) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> c : srg.classes.entrySet()) {
+            sb.append("C\t").append(c.getValue()).append('\t').append(c.getKey()).append('\n');
+        }
+        Map<String, Set<String>> seen = new HashMap<>();
+        for (Map.Entry<String, String> m : srg.methods.entrySet()) {
+            String[] k = m.getKey().split(" ");                       // obfOwner obfName obfDesc
+            String owner = srg.classes.getOrDefault(k[0], k[0]);
+            String desc = remapDesc(k[2], srg.classes);
+            String srgName = m.getValue();
+            String named = mcpMethods.getOrDefault(srgName, srgName);
+            Set<String> s = seen.computeIfAbsent(owner, x -> new HashSet<>());
+            if (!s.add("m " + named + desc)) { named = srgName; s.add("m " + named + desc); }
+            sb.append("M\t").append(owner).append('\t').append(named).append('\t').append(desc).append('\t').append(k[1]).append('\n');
+        }
+        for (Map.Entry<String, String> f : srg.fields.entrySet()) {
+            String[] k = f.getKey().split(" ");                       // obfOwner obfName
+            String owner = srg.classes.getOrDefault(k[0], k[0]);
+            String srgName = f.getValue();
+            String named = mcpFields.getOrDefault(srgName, srgName);
+            Set<String> s = seen.computeIfAbsent(owner, x -> new HashSet<>());
+            if (!s.add("f " + named)) { named = srgName; s.add("f " + named); }
+            sb.append("F\t").append(owner).append('\t').append(named).append('\t').append(k[1]).append('\n');
+        }
+        return sb.toString();
     }
 
     // ---------------------------------------------------------------- build
