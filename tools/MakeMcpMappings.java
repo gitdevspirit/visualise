@@ -203,10 +203,28 @@ public class MakeMcpMappings {
         Map<String, String> reverse = new HashMap<>();   // intermediary -> obfuscated
         for (Map.Entry<String, String> c : inter.classes.entrySet()) reverse.put(c.getValue(), c.getKey());
 
+        // Two classes must never end up with the same named name. Calamus keeps some anonymous classes under their
+        // plain name (Foo$4) while SRG calls a different one Foo$4 too; Loom then fails with "non-unique class target
+        // name mappings". On a clash the class that would be renamed keeps its intermediary name instead.
+        Map<String, String> finalNames = new HashMap<>();   // obf -> named class
+        Map<String, Integer> nameUses = new HashMap<>();
+        for (Map.Entry<String, String> c : inter.classes.entrySet()) {
+            String n = srg.classes.get(c.getKey());
+            if (n == null) n = c.getValue();
+            finalNames.put(c.getKey(), n);
+            nameUses.merge(n, 1, Integer::sum);
+        }
+        int renamedClashes = 0;
+        for (Map.Entry<String, String> c : inter.classes.entrySet()) {
+            String n = finalNames.get(c.getKey());
+            if (nameUses.get(n) > 1 && !n.equals(c.getValue())) { finalNames.put(c.getKey(), c.getValue()); renamedClashes++; }
+        }
+        if (renamedClashes > 0) System.out.println("Resolved " + renamedClashes + " class name clashes (kept intermediary names)");
+
         for (Map.Entry<String, String> c : inter.classes.entrySet()) {
             String obf = c.getKey(), interName = c.getValue();
-            String namedClass = srg.classes.get(obf);
-            if (namedClass == null) { namedClass = interName; noSrgClass++; }
+            String namedClass = finalNames.get(obf);
+            if (srg.classes.get(obf) == null) noSrgClass++;
 
             StringBuilder members = new StringBuilder();
             Set<String> seen = new HashSet<>();
