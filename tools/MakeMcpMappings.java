@@ -211,6 +211,9 @@ public class MakeMcpMappings {
         for (Map.Entry<String, String> c : inter.classes.entrySet()) {
             String n = srg.classes.get(c.getKey());
             if (n == null) n = c.getValue();
+            // Anonymous classes (Foo$1, Foo$4, ...) are never referenced by name in source, and their SRG numbering
+            // collides with Calamus' own Foo$N names inside Loom. Leave them under their intermediary name.
+            if (n.matches(".*\\$\\d+$")) n = c.getValue();
             finalNames.put(c.getKey(), n);
             nameUses.merge(n, 1, Integer::sum);
         }
